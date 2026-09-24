@@ -1,4 +1,4 @@
-"""Data update coordinator for Xiaomi Electric Rice Cooker."""
+"""Data update coordinator for Xiaomi Cooker."""
 
 from __future__ import annotations
 

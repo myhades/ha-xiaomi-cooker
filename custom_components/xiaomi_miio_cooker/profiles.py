@@ -1,4 +1,4 @@
-"""Cooking profile helpers for Xiaomi Electric Rice Cooker."""
+"""Cooking profile helpers for Xiaomi Cooker."""
 
 from __future__ import annotations
 

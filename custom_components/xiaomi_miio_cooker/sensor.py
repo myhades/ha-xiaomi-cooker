@@ -1,4 +1,4 @@
-"""Sensor platform for Xiaomi Electric Rice Cooker."""
+"""Sensor platform for Xiaomi Cooker."""
 
 from __future__ import annotations
 

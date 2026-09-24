@@ -1,4 +1,4 @@
-"""Constants for the Xiaomi Electric Rice Cooker integration."""
+"""Constants for the Xiaomi Cooker integration."""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ SERVICE_START = "start"
 SERVICE_START_RECIPE = "start_recipe"
 
 
-DEFAULT_NAME = "Xiaomi Electric Rice Cooker"
+DEFAULT_NAME = "Xiaomi Cooker"
 DEFAULT_UPDATE_INTERVAL = timedelta(seconds=30)
 COMMAND_REFRESH_DELAY = 2
 TEMPERATURE_HISTORY_MIN_INTERVAL_SECONDS = 120

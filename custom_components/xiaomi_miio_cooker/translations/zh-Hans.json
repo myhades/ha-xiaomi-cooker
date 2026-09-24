@@ -2,7 +2,7 @@
   "config": {
     "step": {
       "user": {
-        "title": "设置小米电饭煲",
+        "title": "设置 Xiaomi Cooker",
         "data": {
           "host": "IP 地址",
           "token": "令牌",

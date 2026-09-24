@@ -2,7 +2,7 @@
   "config": {
     "step": {
       "user": {
-        "title": "Set up Xiaomi Electric Rice Cooker",
+        "title": "Set up Xiaomi Cooker",
         "data": {
           "host": "IP address",
           "token": "Token",

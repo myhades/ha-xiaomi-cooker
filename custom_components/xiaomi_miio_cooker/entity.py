@@ -1,4 +1,4 @@
-"""Shared entity definitions for Xiaomi Electric Rice Cooker."""
+"""Shared entity definitions for Xiaomi Cooker."""
 
 from __future__ import annotations
 

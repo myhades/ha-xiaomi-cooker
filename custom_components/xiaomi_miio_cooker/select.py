@@ -1,4 +1,4 @@
-"""Select platform for Xiaomi Electric Rice Cooker."""
+"""Select platform for Xiaomi Cooker."""
 
 from __future__ import annotations
 

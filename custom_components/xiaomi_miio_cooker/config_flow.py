@@ -1,4 +1,4 @@
-"""Config flow for Xiaomi Electric Rice Cooker."""
+"""Config flow for Xiaomi Cooker."""
 
 from __future__ import annotations
 

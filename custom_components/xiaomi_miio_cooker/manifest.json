@@ -1,6 +1,6 @@
 {
   "domain": "xiaomi_miio_cooker",
-  "name": "Xiaomi Electric Rice Cooker",
+  "name": "Xiaomi Cooker",
   "codeowners": [
     "@myhades"
   ],

@@ -1,11 +1,11 @@
-# Xiaomi Electric Rice Cooker
+# Xiaomi Cooker
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 [![HACS](https://img.shields.io/badge/HACS-Custom-yellow.svg)](https://hacs.xyz/)
 [![Maintainer](https://img.shields.io/badge/maintainer-%40myhades-green)](https://github.com/myhades)
 [![Release](https://img.shields.io/github/v/release/myhades/ha-xiaomi-cooker)](https://github.com/myhades/ha-xiaomi-cooker/releases)
 
-Xiaomi Electric Rice Cooker integrates Xiaomi rice cookers into Home Assistant through local communication.
+Xiaomi Cooker integrates Xiaomi rice cookers into Home Assistant through local communication.
 
 ## Supported Devices
 
@@ -27,7 +27,7 @@ This repository is not in the default list yet. To add it, use the My button bel
 - `Repository`: `https://github.com/myhades/ha-xiaomi-cooker`
 - `Type`: Integration
 
-Then, navigate to `HACS > Xiaomi Electric Rice Cooker` and install the integration.
+Then, navigate to `HACS > Xiaomi Cooker` and install the integration.
 
 [![Open your Home Assistant instance and open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=myhades&repository=ha-xiaomi-cooker&category=integration)
 
@@ -37,9 +37,9 @@ Download the repository and copy the `/custom_components/xiaomi_miio_cooker` fol
 
 ## Configuration
 
-To add the integration, navigate to `Settings > Devices & services > Add integration > Xiaomi Electric Rice Cooker`, or use the My button below. Then follow the configuration flow.
+To add the integration, navigate to `Settings > Devices & services > Add integration > Xiaomi Cooker`, or use the My button below. Then follow the configuration flow.
 
-[![Add Xiaomi Electric Rice Cooker to Home Assistant.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=xiaomi_miio_cooker)
+[![Add Xiaomi Cooker to Home Assistant.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=xiaomi_miio_cooker)
 
 Enter the cooker IP address and token, then select its model or use automatic detection. To change the IP address or token later, select **Reconfigure** from the integration menu. Leave the token blank to keep its current value. The integration verifies the cooker identity before saving changes, preserving existing entities.
 
