@@ -77,17 +77,22 @@ async def test_mixed_raw_service_preflights_before_start(
     second.api.start.assert_not_called()
 
 
-async def test_config_validation_surfaces_connection_failure(hass, monkeypatch):
+async def test_config_validation_surfaces_connection_failure(hass, monkeypatch, caplog):
     api = Mock()
-    api.fetch_device_info.side_effect = DeviceException("No response")
+    token = "abcdef0123456789abcdef0123456789"
+    api.fetch_device_info.side_effect = DeviceException(f"No response; token={token}")
     monkeypatch.setattr(
         "custom_components.xiaomi_miio_cooker.config_flow.XiaomiMiioCookerApi",
         Mock(return_value=api),
     )
     with pytest.raises(CannotConnect):
         await _async_validate_input(
-            hass, {"host": "192.0.2.1", "token": "0" * 32, "model": "auto"}
+            hass, {"host": "192.0.2.1", "token": token, "model": "auto"}
         )
+    assert "miIO.info" in caplog.text
+    assert "No response" in caplog.text
+    assert token not in caplog.text
+    assert "[redacted]" in caplog.text
 
 
 def test_poll_and_command_share_one_lock(metadata):

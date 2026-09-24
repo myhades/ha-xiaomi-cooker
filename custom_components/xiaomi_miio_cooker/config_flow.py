@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any
 
 import voluptuous as vol
@@ -37,6 +38,22 @@ class CannotDetectModel(Exception):
     """Error to indicate automatic model detection failed."""
 
 
+def _log_connection_failure(stage: str, err: Exception, token: str) -> None:
+    """Expose connection errors without logging credentials or traceback locals."""
+    detail = str(err)
+    normalized = "".join(token.replace("\ufeff", "").split())
+    for secret in (token, normalized):
+        if secret:
+            detail = re.sub(re.escape(secret), "[redacted]", detail, flags=re.I)
+    detail = re.sub(r"[0-9a-fA-F]{32}", "[redacted]", detail)
+    _LOGGER.warning(
+        "Cooker connection validation failed during %s: %s: %s",
+        stage,
+        type(err).__name__,
+        detail,
+    )
+
+
 async def _async_validate_input(
     hass: HomeAssistant,
     data: dict[str, Any],
@@ -55,6 +72,7 @@ async def _async_validate_input(
         try:
             metadata = await hass.async_add_executor_job(api.fetch_device_info)
         except DeviceException as err:
+            _log_connection_failure("miIO.info", err, data[CONF_TOKEN])
             raise CannotConnect from err
 
         if not metadata.model:
@@ -71,6 +89,11 @@ async def _async_validate_input(
     except UnsupportedModelError as err:
         raise UnsupportedModelError from err
     except DeviceException as err:
+        _log_connection_failure(
+            "initial status read" if configured_model is None else "device validation",
+            err,
+            data[CONF_TOKEN],
+        )
         raise CannotConnect from err
 
     metadata = metadata or initial_data.device_info
