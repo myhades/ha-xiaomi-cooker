@@ -6,10 +6,37 @@ from miio import DeviceException
 
 from custom_components.xiaomi_miio_cooker.cmc301 import Cmc301Backend
 from custom_components.xiaomi_miio_cooker.select import (
+    LidTimeoutSelect,
     PanelRecipeSelect,
     PanelSleepSelect,
     RecipeTasteSelect,
 )
+
+
+async def test_normal3_shared_panel_controls(make_coordinator):
+    coordinator = make_coordinator(False)
+    coordinator.async_set_updated_data(
+        replace(
+            coordinator.data,
+            properties={
+                **coordinator.data.properties,
+                "panel_recipe_id": 258,
+                "lid_open_timeout": 4,
+            },
+        )
+    )
+    recipe = PanelRecipeSelect(coordinator, "panel_recipe")
+    sleep = PanelSleepSelect(coordinator, "panel_auto_off")
+    lid = LidTimeoutSelect(coordinator, "lid_open_timeout")
+    assert recipe.current_option == "refan"
+    assert "jingzhu" not in recipe.options and "soup" in recipe.options
+    assert sleep.options == ["off", "5", "6", "7", "8", "9", "10"]
+    assert lid.current_option == "4" and lid.options == ["2", "4", "6", "8", "10"]
+    with pytest.raises(HomeAssistantError):
+        await recipe.async_select_option("jingzhu")
+    await recipe.async_select_option("soup")
+    coordinator.api.set_panel_recipe.assert_called_once()
+    coordinator.api.start.assert_not_called()
 
 
 def test_panel_sleep_atomic_write_and_readback(device, metadata):

@@ -6,7 +6,7 @@ from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .coordinator import XiaomiCookerConfigEntry
-from .entity import Cmc301Entity, RecipeParameterEntity
+from .entity import CookerPropertyEntity, RecipeParameterEntity
 
 # Polls and writes are serialized per device by the coordinator/API locks.
 PARALLEL_UPDATES = 0
@@ -20,18 +20,16 @@ async def async_setup_entry(
     coordinator = entry.runtime_data
     if coordinator.recipe_codec is not None:
         async_add_entities([RecipeKeepWarmSwitch(coordinator, "next_auto_keep_warm")])
-    if coordinator.is_cmc301:
-        async_add_entities(
-            Cmc301Switch(coordinator, key)
-            for key in (
-                "completion_notification",
-                "all_modes_lit",
-                "buzzer",
-            )
+    if coordinator.recipe_codec is not None:
+        keys = (
+            ("completion_notification", "all_modes_lit", "buzzer")
+            if coordinator.is_cmc301
+            else ("completion_notification", "lid_open_warning")
         )
+        async_add_entities(CookerSettingSwitch(coordinator, key) for key in keys)
 
 
-class Cmc301Switch(Cmc301Entity, SwitchEntity):
+class CookerSettingSwitch(CookerPropertyEntity, SwitchEntity):
     def __init__(self, coordinator, key):
         super().__init__(coordinator, key)
         if key != "buzzer":

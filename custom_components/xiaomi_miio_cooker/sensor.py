@@ -202,7 +202,17 @@ async def async_setup_entry(
             else description
             for description in descriptions
             if description.key
-            not in {"mode", "menu", "duration", "taste", "taste_phase"}
+            not in {
+                "mode",
+                "menu",
+                "duration",
+                "taste",
+                "taste_phase",
+                "favorite",
+                "panel_display_auto_off",
+                "lid_open_warning",
+                "lid_open_timeout",
+            }
         )
     async_add_entities(
         XiaomiCookerSensor(coordinator, description) for description in descriptions

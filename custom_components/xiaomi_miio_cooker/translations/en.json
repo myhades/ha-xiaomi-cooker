@@ -110,6 +110,16 @@
           "baby_congee": "Baby congee",
           "other": "Other"
         }
+      },
+      "lid_open_timeout": {
+        "name": "Keep-warm timeout",
+        "state": {
+          "2": "2 minutes",
+          "4": "4 minutes",
+          "6": "6 minutes",
+          "8": "8 minutes",
+          "10": "10 minutes"
+        }
       }
     },
     "sensor": {
@@ -168,7 +178,7 @@
         "name": "Duration"
       },
       "favorite": {
-        "name": "Favorite",
+        "name": "Custom recipe",
         "state": {
           "jingzhu": "Jingzhu",
           "kuaizhu": "Kuaizhu",
@@ -282,6 +292,9 @@
       },
       "buzzer": {
         "name": "Buzzer"
+      },
+      "lid_open_warning": {
+        "name": "Lid open alarm"
       }
     },
     "binary_sensor": {

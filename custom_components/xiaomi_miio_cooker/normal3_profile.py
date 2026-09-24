@@ -45,6 +45,18 @@ def default_options(profile: str) -> RecipeOptions:
     )
 
 
+def panel_profile(profile: str) -> str:
+    """Save a custom menu using the official plugin's custom-save flag."""
+    data = bytearray(decode_profile(profile))
+    if int.from_bytes(data[:2], "big") <= 4:
+        raise RecipeValidationError(
+            "unsupported_recipe", "Basic menus cannot occupy the custom slot"
+        )
+    data[2] |= 0x80
+    data[-2:] = crc_hqx(data[:-2], 0).to_bytes(2, "big")
+    return data.hex()
+
+
 def supports_option(profile: str, key: str) -> bool:
     data = decode_profile(profile)
     return {

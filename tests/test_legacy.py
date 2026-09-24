@@ -23,11 +23,14 @@ from custom_components.xiaomi_miio_cooker.profiles import get_profiles_for_model
 
 
 def make_legacy():
-    return LegacyCookerBackend(
+    backend = LegacyCookerBackend(
         "192.0.2.1",
         "0" * 32,
         CookerDeviceMetadata(MODEL_NORMAL3, "test", "test", "aa:bb:cc:dd:ee:ff"),
     )
+
+    backend._cooker.send = Mock(return_value=["0100"])
+    return backend
 
 
 def test_normal3_wire_start_stop_unchanged():

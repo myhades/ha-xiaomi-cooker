@@ -28,6 +28,8 @@ SAFE_PROPERTIES = {
     "all_modes_lit",
     "display_timeout",
     "panel_recipe_id",
+    "lid_open_warning",
+    "lid_open_timeout",
 }
 
 

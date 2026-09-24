@@ -79,11 +79,13 @@ class RecipeParameterEntity(XiaomiMiioCookerEntity):
             "boiling": "mdi:pot-steam-outline",
             "save_panel_recipe": "mdi:content-save-outline",
             "panel_recipe": "mdi:book-edit-outline",
+            "lid_open_warning": "mdi:bell-ring-outline",
+            "lid_open_timeout": "mdi:timer-cog-outline",
         }.get(key)
 
 
-class Cmc301Entity(RecipeParameterEntity):
-    """Base for CMC301 device settings and feedback."""
+class CookerPropertyEntity(RecipeParameterEntity):
+    """Shared device settings and readback properties."""
 
     @property
     def reported_value(self):

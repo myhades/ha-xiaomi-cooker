@@ -11,6 +11,7 @@ from typing import Any
 from miio import Cooker, DeviceException
 
 from .const import MODEL_NORMAL3, TEMPERATURE_HISTORY_MIN_INTERVAL_SECONDS
+from .exceptions import CookerCommandError
 from .models import (
     CookerData,
     CookerDeviceMetadata,
@@ -19,6 +20,7 @@ from .models import (
     CookerStageData,
     CookerStatusData,
 )
+from .normal3_profile import panel_profile
 from .stages import history_payload, rice_history_stage
 
 _LOGGER = logging.getLogger(__name__)
@@ -192,6 +194,35 @@ class LegacyCookerBackend:
         else:
             self._last_known_temperature = temperature
 
+        properties = {
+            "stage_source": "temperature_history" if normal3 else "device_stage",
+            "stage_raw": raw_data.get("stage"),
+            "history_phase_index": phase.state
+            if normal3 and phase is not None
+            else None,
+        }
+        if normal3:
+            settings = _build_settings_data(getattr(raw_status, "settings", None))
+            timeouts = _build_interaction_timeouts_data(
+                getattr(raw_status, "interaction_timeouts", None)
+            )
+            properties.update(
+                {
+                    "panel_recipe_id": status.favorite,
+                    "panel_auto_off": not settings.led_on
+                    if settings and settings.led_on is not None
+                    else None,
+                    "display_timeout": timeouts.led_off if timeouts else None,
+                    "lid_open_warning": settings.lid_open_warning_delayed
+                    if settings
+                    else None,
+                    "lid_open_timeout": timeouts.lid_open if timeouts else None,
+                }
+            )
+            try:
+                properties["completion_notification"] = self._read_push()
+            except DeviceException:
+                properties["completion_notification"] = None
         return CookerData(
             device_info=self.metadata,
             status=status,
@@ -200,14 +231,100 @@ class LegacyCookerBackend:
                 getattr(raw_status, "interaction_timeouts", None)
             ),
             temperature=temperature,
-            properties={
-                "stage_source": "temperature_history" if normal3 else "device_stage",
-                "stage_raw": raw_data.get("stage"),
-                "history_phase_index": phase.state
-                if normal3 and phase is not None
-                else None,
-            },
+            properties=properties,
         )
+
+    def _read_push(self) -> bool:
+        result = self._cooker.send("get_setting", ["en_push"], retry_count=0)
+        if (
+            not isinstance(result, list)
+            or not result
+            or not isinstance(result[0], str)
+            or not re.fullmatch(r"[0-9a-fA-F]{4}", result[0])
+            or result[0][:2] not in ("00", "01")
+        ):
+            raise DeviceException("Invalid completion notification setting")
+        return result[0][:2] == "00"
+
+    def _idle_snapshot(self):
+        if self.metadata.model != MODEL_NORMAL3:
+            raise ValueError("Settings are only supported for normal3")
+        status = self._cooker.status()
+        if status.data.get("func") != "waiting":
+            raise CookerCommandError("cooker_busy", "Cooker must be idle")
+        return status
+
+    def _write(self, method, params):
+        if self._cooker.send(method, params, retry_count=0) != ["ok"]:
+            raise CookerCommandError(
+                "write_unconfirmed", "Setting write was not confirmed"
+            )
+
+    def set_panel_recipe(self, profile: str) -> None:
+        encoded = panel_profile(profile)
+        self._idle_snapshot()
+        self._write("set_menu", [encoded])
+        if self._cooker.status().favorite != int(encoded[:4], 16):
+            raise CookerCommandError(
+                "write_unconfirmed", "Custom recipe was not confirmed"
+            )
+
+    def set_setting(self, key: str, value) -> None:
+        if key == "panel_sleep":
+            if value != "off" and (type(value) is not int or not 5 <= value <= 10):
+                raise ValueError("normal3 panel sleep must be off or 5-10 minutes")
+        elif key == "lid_open_timeout":
+            if type(value) is not int or value not in (2, 4, 6, 8, 10):
+                raise ValueError("Lid timeout must be 2, 4, 6, 8 or 10 minutes")
+        elif (
+            key not in ("lid_open_warning", "completion_notification")
+            or type(value) is not bool
+        ):
+            raise ValueError("Unsupported normal3 setting")
+        status = self._idle_snapshot()
+        if key == "completion_notification":
+            self._write("set_setting", ["00" if value else "01", "00", ""])
+            if self._read_push() != value:
+                raise CookerCommandError(
+                    "write_unconfirmed", "Notification setting was not confirmed"
+                )
+            return
+        raw_settings, raw_delays = status.data.get("setting"), status.data.get("delay")
+        if (
+            not isinstance(raw_settings, str)
+            or not re.fullmatch(r"[0-9a-fA-F]{4}", raw_settings)
+            or not isinstance(raw_delays, str)
+            or not re.fullmatch(r"[0-9a-fA-F]{6}", raw_delays)
+        ):
+            raise DeviceException("Invalid interaction settings")
+        original = int(raw_settings[:2], 16)
+        flags = ((original & 2) >> 1) | ((original & 8) >> 2) | ((original & 16) >> 2)
+        delays = bytearray.fromhex(raw_delays)
+        if key == "panel_sleep":
+            flags = flags | 1 if value == "off" else flags & ~1
+            if value != "off":
+                delays[0] = value
+        elif key == "lid_open_warning":
+            flags = flags | 4 if value else flags & ~4
+        else:
+            delays[1] = value
+        # The plugin sends a single comma-separated string, not four arguments.
+        self._write("set_interaction", [",".join(f"{v:x}" for v in (flags, *delays))])
+        actual = self._cooker.status().data
+        expected = (
+            (original & ~0x1A)
+            | ((flags & 1) << 1)
+            | ((flags & 2) << 2)
+            | ((flags & 4) << 2)
+        )
+        if (
+            actual.get("setting", "").lower()
+            != f"{expected:02x}" + raw_settings[2:].lower()
+            or actual.get("delay", "").lower() != delays.hex()
+        ):
+            raise CookerCommandError(
+                "write_unconfirmed", "Interaction settings were not confirmed"
+            )
 
     def _get_temperature_from_history(self) -> int | None:
         """Read cached temperature history and throttle expensive updates."""

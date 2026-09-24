@@ -11,9 +11,9 @@ from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .coordinator import XiaomiCookerConfigEntry
-from .entity import Cmc301Entity, RecipeParameterEntity, XiaomiMiioCookerEntity
+from .entity import CookerPropertyEntity, RecipeParameterEntity, XiaomiMiioCookerEntity
 from .errors import validation_error
-from .profiles import get_cmc301_menu_key
+from .profiles import get_cmc301_menu_key, get_menu_key
 
 # Polls and writes are serialized per device by the coordinator/API locks.
 PARALLEL_UPDATES = 0
@@ -54,13 +54,15 @@ async def async_setup_entry(
             ]
         )
 
-    if coordinator.is_cmc301:
+    if coordinator.recipe_codec is not None:
         async_add_entities(
             [
                 PanelSleepSelect(coordinator, "panel_auto_off"),
                 PanelRecipeSelect(coordinator, "panel_recipe"),
             ]
         )
+        if not coordinator.is_cmc301:
+            async_add_entities([LidTimeoutSelect(coordinator, "lid_open_timeout")])
 
 
 class XiaomiCookerSelect(XiaomiMiioCookerEntity, SelectEntity):
@@ -165,9 +167,13 @@ class RecipeDurationSelect(RecipeParameterEntity, SelectEntity):
         self.coordinator.set_recipe_option("duration", int(option))
 
 
-class PanelSleepSelect(Cmc301Entity, SelectEntity):
+class PanelSleepSelect(CookerPropertyEntity, SelectEntity):
     _attr_entity_category = EntityCategory.CONFIG
-    _attr_options: ClassVar[list[str]] = ["off", *map(str, range(2, 11))]
+
+    @property
+    def options(self):
+        minimum = 2 if self.coordinator.is_cmc301 else 5
+        return ["off", *map(str, range(minimum, 11))]
 
     @property
     def current_option(self):
@@ -195,19 +201,50 @@ class PanelSleepSelect(Cmc301Entity, SelectEntity):
         )
 
 
-class PanelRecipeSelect(Cmc301Entity, SelectEntity):
+class PanelRecipeSelect(CookerPropertyEntity, SelectEntity):
     @property
     def current_option(self):
         value = self.coordinator.data.properties.get("panel_recipe_id")
-        return get_cmc301_menu_key(value) if type(value) is int else None
+        if type(value) is not int:
+            return None
+        if self.coordinator.is_cmc301:
+            return get_cmc301_menu_key(value)
+        return (
+            get_menu_key(value, self.coordinator.config_entry.data.get("model"))
+            or "other"
+        )
 
     @property
     def options(self):
         if self.coordinator.cooking_active:
             return [self.current_option] if self.current_option is not None else []
-        recipes = self.coordinator.cooking_menu_options
-        return [*recipes, "other"] if self.current_option == "other" else recipes
+        recipes = self.coordinator.panel_recipe_options
+        current = self.current_option
+        return (
+            [*recipes, current]
+            if current is not None and current not in recipes
+            else recipes
+        )
 
     async def async_select_option(self, option):
         # 'Other' represents a readback, never an instruction to overwrite the slot.
         await self.coordinator.async_select_panel_recipe(option)
+
+
+class LidTimeoutSelect(CookerPropertyEntity, SelectEntity):
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_options: ClassVar[list[str]] = ["2", "4", "6", "8", "10"]
+
+    @property
+    def current_option(self):
+        value = self.reported_value
+        return str(value) if type(value) is int else None
+
+    @property
+    def available(self):
+        return super().available and self.current_option in self.options
+
+    async def async_select_option(self, option):
+        if option not in self.options:
+            raise validation_error("invalid_duration_option")
+        await self.coordinator.async_set_setting("lid_open_timeout", int(option))

@@ -147,13 +147,21 @@ class XiaomiMiioCookerCoordinator(DataUpdateCoordinator[CookerData]):
         await self._async_execute_command(self.api.set_setting, key, value)
 
     async def async_select_panel_recipe(self, recipe: str) -> None:
-        if not self.is_cmc301 or recipe not in self._profiles_by_key:
+        if recipe not in self.panel_recipe_options:
             raise validation_error("unsupported_recipe")
         if self.cooking_active:
             raise validation_error("cooker_busy")
         await self._async_execute_command(
             self.api.set_panel_recipe, self._profiles_by_key[recipe].profile
         )
+
+    @property
+    def panel_recipe_options(self) -> list[str]:
+        if self.is_cmc301:
+            return self.cooking_menu_options
+        if self.config_entry.data.get("model") == MODEL_NORMAL3:
+            return [p.key for p in self._profiles if int(p.profile[:4], 16) > 4]
+        return []
 
     @property
     def device_name(self) -> str:

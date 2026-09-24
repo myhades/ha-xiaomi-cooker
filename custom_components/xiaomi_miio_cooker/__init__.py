@@ -85,6 +85,16 @@ def _remove_replaced_duration_number(hass, entry, device_unique_id, model=None):
                 ("button", "save_panel_recipe"),
             ]
         )
+    elif model == MODEL_NORMAL3:
+        replaced.extend(
+            ("sensor", key)
+            for key in (
+                "favorite",
+                "panel_display_auto_off",
+                "lid_open_warning",
+                "lid_open_timeout",
+            )
+        )
     for platform, key in replaced:
         entity_id = registry.async_get_entity_id(
             platform, DOMAIN, f"{device_unique_id}_{key}"

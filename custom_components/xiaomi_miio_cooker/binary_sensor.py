@@ -5,7 +5,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .coordinator import XiaomiCookerConfigEntry
-from .entity import Cmc301Entity
+from .entity import CookerPropertyEntity
 
 # Polls and writes are serialized per device by the coordinator/API locks.
 PARALLEL_UPDATES = 0
@@ -24,7 +24,7 @@ async def async_setup_entry(
         )
 
 
-class Cmc301BinarySensor(Cmc301Entity, BinarySensorEntity):
+class Cmc301BinarySensor(CookerPropertyEntity, BinarySensorEntity):
     @property
     def is_on(self):
         return self.reported_value

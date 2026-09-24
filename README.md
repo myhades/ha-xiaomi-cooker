@@ -58,7 +58,7 @@ While cooking, the menu, duration and taste selectors display the device's curre
 | Taste | Fine rice only | Fine rice only |
 | Automatic keep-warm | Supported recipes | Supported recipes |
 | Scheduled completion | Supported recipes | Not exposed as a preparation control |
-| Save recipe to panel | Supported | Not exposed |
+| Save recipe to panel | Supported | Supported for custom-slot recipes |
 | Cooking stage and description | Fine and quick rice | Fine and quick rice |
 
 Duration choices use 5- or 10-minute intervals and include each recipe's bounds and default. Fixed-duration recipes provide one option. Automatic keep-warm is a parameter for the next recipe, not a general live toggle during cooking.
@@ -69,7 +69,7 @@ Duration choices use 5- or 10-minute intervals and include each recipe's bounds 
 
 On CMC301, **Scheduled duration** is the number of minutes until the meal finishes, not the delay before cooking starts. Set it to 0 for an immediate start. The selected recipe determines whether scheduling is available and the minimum completion time.
 
-The **Custom recipe** selector saves a bundled recipe with its default parameters to the CMC301 panel without starting it. It shows **Other** for an identified recipe outside the bundled list; Other cannot be selected. The local protocol reports the saved recipe when the panel is in custom mode. Until that is observed, the saved selection is unknown; afterward, the last observed selection is retained until another observation or integration reload.
+The **Custom recipe** selector saves a bundled recipe with its default parameters to the panel without starting it. It shows **Other** for an identified recipe outside the bundled list; Other cannot be selected. normal3 reports its saved custom recipe independently and allows the extended recipes in this slot. CMC301 reports the saved recipe when the panel is in custom mode. Until that is observed, the saved selection is unknown; afterward, the last observed selection is retained until another observation or integration reload.
 
 ### Feedback and Device Settings
 
@@ -77,7 +77,7 @@ Feedback includes the current menu, working status, remaining time and duration.
 
 **Panel mode lights** controls the CMC301 panel: on lights all mode indicators with the selected mode flashing; off lights only the selected mode. Raw protocol sensors are disabled by default.
 
-**Panel auto off** offers **Off** and **2–10 minutes**, in one-minute steps.
+**Panel auto off** offers **Off** and **2–10 minutes** on CMC301, or **Off** and **5–10 minutes** on normal3, in one-minute steps. Both models support **Completion notification**. normal3 also provides **Lid open alarm** and **Keep-warm timeout**, with timeout options of 2, 4, 6, 8 and 10 minutes. normal3 settings can be changed while idle.
 
 Temperature comes from recorded temperature history when no direct reading is available; it is not an instantaneous heater or power measurement. Fine and quick rice show five cooking stages based on the official plugin's temperature-history method. Other recipes do not use that stage mapping.
 

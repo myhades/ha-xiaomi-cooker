@@ -6,7 +6,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .coordinator import XiaomiCookerConfigEntry
-from .entity import Cmc301Entity
+from .entity import CookerPropertyEntity
 from .errors import validation_error
 
 # Polls and writes are serialized per device by the coordinator/API locks.
@@ -23,7 +23,7 @@ async def async_setup_entry(
         async_add_entities(Cmc301Number(coordinator, key) for key in ("finish_in",))
 
 
-class Cmc301Number(Cmc301Entity, NumberEntity):
+class Cmc301Number(CookerPropertyEntity, NumberEntity):
     _attr_native_step = 1
     _attr_native_unit_of_measurement = UnitOfTime.MINUTES
     _attr_mode = NumberMode.BOX
