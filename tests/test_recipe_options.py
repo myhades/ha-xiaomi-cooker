@@ -139,7 +139,11 @@ async def test_duration_selector_updates_atomically_with_default(
         for recipe in coordinator.cooking_menu_options:
             await coordinator.async_select_cooking_menu(recipe)
             assert duration.available and duration.current_option in duration.options
-            assert taste.available == (recipe == "jingzhu")
+            assert taste.available
+            if recipe != "jingzhu":
+                assert taste.current_option == "default" and taste.options == [
+                    "default"
+                ]
             assert warm.available == coordinator.recipe_codec.supports_option(
                 coordinator.selected_recipe.profile, "auto_keep_warm"
             )
@@ -166,7 +170,7 @@ async def test_duration_selector_updates_atomically_with_default(
             and duration.options == []
             and duration.current_option is None
         )
-        assert not taste.available and not warm.available
+        assert taste.available and not warm.available
         assert all(
             current in options for available, current, options in snapshots if available
         )

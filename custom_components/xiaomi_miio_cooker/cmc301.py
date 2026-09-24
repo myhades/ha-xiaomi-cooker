@@ -51,6 +51,7 @@ class Cmc301Backend:
         self._history = ()
         self._history_context = None
         self._history_stage = None
+        self._panel_recipe_id = None
 
     def _read(self, mapping: dict) -> dict:
         values = {}
@@ -106,6 +107,9 @@ class Cmc301Backend:
         values = self._read(PROPERTIES)
         if type(values["status_code"]) is not int:
             raise DeviceException("CMC301 did not return its working status")
+        if values["mode_code"] == 5 and type(values["recipe_id"]) is int:
+            self._panel_recipe_id = values["recipe_id"]
+        values["panel_recipe_id"] = self._panel_recipe_id
         try:
             settings = self._read_settings()
         except DeviceException:
@@ -221,6 +225,18 @@ class Cmc301Backend:
                 {"piid": 32, "value": True},
             ],
         )
+        # Saving switches the panel to custom mode; confirm the actual selection.
+        values = self._read(
+            {key: PROPERTIES[key] for key in ("mode_code", "recipe_id")}
+        )
+        expected = int(profile[6:14], 16)
+        self._panel_recipe_id = (
+            values["recipe_id"] if values["mode_code"] == 5 else None
+        )
+        if self._panel_recipe_id != expected:
+            raise CookerCommandError(
+                "write_unconfirmed", "Panel recipe was not confirmed"
+            )
 
     def set_setting(self, key: str, value) -> None:
         if key == "buzzer":
@@ -247,19 +263,25 @@ class Cmc301Backend:
             "completion_notification": (2, True),
             "all_modes_lit": (3, False),
         }
-        if key == "display_timeout":
+        if key == "panel_sleep":
+            if value != "off" and (type(value) is not int or not 2 <= value <= 10):
+                raise ValueError("Panel sleep must be off or 2-10 minutes")
+            updates = {0: 1} if value == "off" else {0: 0, 1: value}
+        elif key == "display_timeout":
             if type(value) is not int or not 2 <= value <= 10:
                 raise ValueError("Display timeout must be 2-10 minutes")
-            index, encoded = 1, value
+            updates = {1: value}
         elif key in fields and type(value) is bool:
             index, inverted = fields[key]
-            encoded = int(not value if inverted else value)
+            updates = {index: int(not value if inverted else value)}
         else:
             raise ValueError("Unsupported cooker setting")
         settings = self._read_settings()
-        settings[index] = encoded
+        for index, encoded in updates.items():
+            settings[index] = encoded
         self._action(6, 1, [{"piid": 1, "value": settings.hex()}])
-        if self._read_settings()[index] != encoded:
+        readback = self._read_settings()
+        if any(readback[index] != encoded for index, encoded in updates.items()):
             raise CookerCommandError(
                 "write_unconfirmed", "Settings write was not confirmed"
             )

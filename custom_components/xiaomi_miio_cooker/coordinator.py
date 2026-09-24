@@ -13,7 +13,6 @@ from miio import DeviceException
 
 from . import cmc301_profile, normal3_profile
 from .api import CookerData, UnsupportedModelError, XiaomiMiioCookerApi
-from .cmc301_profile import encode_profile
 from .const import (
     COMMAND_REFRESH_DELAY,
     DEFAULT_NAME,
@@ -147,17 +146,14 @@ class XiaomiMiioCookerCoordinator(DataUpdateCoordinator[CookerData]):
     async def async_set_setting(self, key: str, value) -> None:
         await self._async_execute_command(self.api.set_setting, key, value)
 
-    async def async_set_panel_recipe(self) -> None:
-        if (
-            not self.is_cmc301
-            or self.selected_recipe is None
-            or self.recipe_options is None
-        ):
-            raise validation_error("select_recipe")
-        if self.recipe_options.finish_in:
-            raise validation_error("clear_schedule")
-        profile = encode_profile(self.selected_recipe.profile, self.recipe_options)
-        await self._async_execute_command(self.api.set_panel_recipe, profile)
+    async def async_select_panel_recipe(self, recipe: str) -> None:
+        if not self.is_cmc301 or recipe not in self._profiles_by_key:
+            raise validation_error("unsupported_recipe")
+        if self.cooking_active:
+            raise validation_error("cooker_busy")
+        await self._async_execute_command(
+            self.api.set_panel_recipe, self._profiles_by_key[recipe].profile
+        )
 
     @property
     def device_name(self) -> str:

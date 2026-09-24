@@ -27,6 +27,7 @@ SAFE_PROPERTIES = {
     "completion_notification",
     "all_modes_lit",
     "display_timeout",
+    "panel_recipe_id",
 }
 
 

@@ -39,9 +39,6 @@
       },
       "stop_cooking": {
         "name": "Stop cooking"
-      },
-      "save_panel_recipe": {
-        "name": "Save custom recipe"
       }
     },
     "select": {
@@ -71,11 +68,48 @@
         "state": {
           "soft": "Soft",
           "middle": "Middle",
-          "hard": "Hard"
+          "hard": "Hard",
+          "default": "Default"
         }
       },
       "next_duration": {
         "name": "Duration"
+      },
+      "panel_auto_off": {
+        "name": "Panel auto off",
+        "state": {
+          "off": "Off",
+          "2": "2 minutes",
+          "3": "3 minutes",
+          "4": "4 minutes",
+          "5": "5 minutes",
+          "6": "6 minutes",
+          "7": "7 minutes",
+          "8": "8 minutes",
+          "9": "9 minutes",
+          "10": "10 minutes"
+        }
+      },
+      "panel_recipe": {
+        "name": "Custom recipe",
+        "state": {
+          "jingzhu": "Jingzhu",
+          "kuaizhu": "Kuaizhu",
+          "zhuzhou": "Zhuzhou",
+          "baowen": "Baowen",
+          "cake": "Cake",
+          "yoghurt": "Yoghurt",
+          "refan": "Refan",
+          "cooking": "Cooking",
+          "sweet_rice": "Sweet rice",
+          "quick_rice": "Quick rice",
+          "brown_rice": "Brown rice",
+          "oden": "Oden",
+          "soup": "Soup",
+          "noodles": "Instant noodles",
+          "baby_congee": "Baby congee",
+          "other": "Other"
+        }
       }
     },
     "sensor": {
@@ -233,18 +267,12 @@
     },
     "number": {
       "next_finish_in": {
-        "name": "Scheduled completion"
-      },
-      "display_timeout": {
-        "name": "Display auto-off delay"
+        "name": "Scheduled duration"
       }
     },
     "switch": {
       "next_auto_keep_warm": {
         "name": "Automatic keep warm"
-      },
-      "panel_auto_off": {
-        "name": "Panel auto off"
       },
       "completion_notification": {
         "name": "Completion notification"

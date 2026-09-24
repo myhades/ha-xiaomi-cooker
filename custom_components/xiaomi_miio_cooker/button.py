@@ -9,7 +9,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .coordinator import XiaomiCookerConfigEntry
-from .entity import Cmc301Entity, XiaomiMiioCookerEntity
+from .entity import XiaomiMiioCookerEntity
 
 # Polls and writes are serialized per device by the coordinator/API locks.
 PARALLEL_UPDATES = 0
@@ -47,9 +47,6 @@ async def async_setup_entry(
         XiaomiCookerButton(coordinator, description)
         for description in BUTTON_DESCRIPTIONS
     )
-
-    if coordinator.is_cmc301:
-        async_add_entities([Cmc301PanelButton(coordinator, "save_panel_recipe")])
 
 
 class XiaomiCookerButton(XiaomiMiioCookerEntity, ButtonEntity):
@@ -89,16 +86,3 @@ class XiaomiCookerButton(XiaomiMiioCookerEntity, ButtonEntity):
             return
 
         await self.coordinator.async_stop()
-
-
-class Cmc301PanelButton(Cmc301Entity, ButtonEntity):
-    @property
-    def available(self):
-        return (
-            super().available
-            and not self.coordinator.cooking_active
-            and self.coordinator.selected_recipe is not None
-        )
-
-    async def async_press(self):
-        await self.coordinator.async_set_panel_recipe()

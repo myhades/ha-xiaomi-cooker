@@ -39,9 +39,6 @@
       },
       "stop_cooking": {
         "name": "停止烹饪"
-      },
-      "save_panel_recipe": {
-        "name": "保存自选食谱"
       }
     },
     "select": {
@@ -71,11 +68,48 @@
         "state": {
           "soft": "偏软",
           "middle": "适中",
-          "hard": "偏硬"
+          "hard": "偏硬",
+          "default": "默认"
         }
       },
       "next_duration": {
         "name": "时长"
+      },
+      "panel_auto_off": {
+        "name": "面板自动熄屏",
+        "state": {
+          "off": "关闭",
+          "2": "2 分钟",
+          "3": "3 分钟",
+          "4": "4 分钟",
+          "5": "5 分钟",
+          "6": "6 分钟",
+          "7": "7 分钟",
+          "8": "8 分钟",
+          "9": "9 分钟",
+          "10": "10 分钟"
+        }
+      },
+      "panel_recipe": {
+        "name": "自选食谱",
+        "state": {
+          "jingzhu": "精煮",
+          "kuaizhu": "快煮",
+          "zhuzhou": "煮粥",
+          "baowen": "保温",
+          "cake": "蛋糕",
+          "yoghurt": "酸奶",
+          "refan": "热饭",
+          "cooking": "烹饪",
+          "sweet_rice": "米饭 香甜煮",
+          "quick_rice": "快速煮饭",
+          "brown_rice": "糙米饭",
+          "oden": "关东煮",
+          "soup": "煲汤",
+          "noodles": "泡面",
+          "baby_congee": "婴儿粥",
+          "other": "其他"
+        }
       }
     },
     "sensor": {
@@ -233,18 +267,12 @@
     },
     "number": {
       "next_finish_in": {
-        "name": "预约完成"
-      },
-      "display_timeout": {
-        "name": "屏幕自动熄灭延时"
+        "name": "预约时长"
       }
     },
     "switch": {
       "next_auto_keep_warm": {
         "name": "自动保温"
-      },
-      "panel_auto_off": {
-        "name": "面板自动熄灭"
       },
       "completion_notification": {
         "name": "完成推送"

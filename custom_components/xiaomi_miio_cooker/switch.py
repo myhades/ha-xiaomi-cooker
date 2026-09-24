@@ -24,7 +24,6 @@ async def async_setup_entry(
         async_add_entities(
             Cmc301Switch(coordinator, key)
             for key in (
-                "panel_auto_off",
                 "completion_notification",
                 "all_modes_lit",
                 "buzzer",

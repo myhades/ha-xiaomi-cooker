@@ -24,7 +24,7 @@ async def test_selectors_show_live_feedback_without_arming_start(
 ):
     coordinator = make_coordinator(cmc)
     entities = await setup_platforms(hass, coordinator)
-    menu, taste, duration = entities["select"]
+    menu, taste, duration = entities["select"][:3]
     start = entities["button"][0]
     assert not start.available
     stage = CookerStageData(None, None, 66, 2, None, None)
@@ -62,9 +62,7 @@ async def test_selectors_show_live_feedback_without_arming_start(
     coordinator.async_set_updated_data(
         replace(snapshot, status=replace(snapshot.status, status="idle"))
     )
-    assert (
-        menu.current_option is None and not taste.available and not duration.available
-    )
+    assert menu.current_option is None and taste.available and not duration.available
     await menu.async_select_option("jingzhu")
     assert start.available and duration.current_option == "60"
 
@@ -95,7 +93,7 @@ async def setup_platforms(hass, coordinator):
 async def test_legacy_entities_unchanged(hass, make_coordinator):
     coordinator = make_coordinator(False)
     entities = await setup_platforms(hass, coordinator)
-    assert len(entities["sensor"]) == 11
+    assert len(entities["sensor"]) == 10
     assert len(entities["select"]) == 3
     assert len(entities["button"]) == 2
     assert entities["number"] == entities["binary_sensor"] == []
@@ -105,8 +103,7 @@ async def test_legacy_entities_unchanged(hass, make_coordinator):
             entity.unique_id
             == coordinator.device_unique_id + "_" + entity.entity_description.key
         )
-    assert entities["sensor"][0].options == list(sensor.MODE_OPTIONS)
-    assert entities["sensor"][1].options == list(sensor.STATUS_OPTIONS)
+    assert entities["sensor"][0].options == list(sensor.STATUS_OPTIONS)
 
 
 async def test_cmc_menu_units_options_and_independent_draft(hass, make_coordinator):

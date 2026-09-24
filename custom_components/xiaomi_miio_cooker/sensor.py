@@ -201,7 +201,8 @@ async def async_setup_entry(
             if description.key in {"stage_name", "stage_description"}
             else description
             for description in descriptions
-            if description.key not in {"menu", "duration", "taste", "taste_phase"}
+            if description.key
+            not in {"mode", "menu", "duration", "taste", "taste_phase"}
         )
     async_add_entities(
         XiaomiCookerSensor(coordinator, description) for description in descriptions
@@ -397,7 +398,6 @@ def cmc301_descriptions():
     descriptions = []
     for description in SENSOR_DESCRIPTIONS:
         if description.key not in {
-            "mode",
             "status",
             "remaining",
             "stage_name",

@@ -82,6 +82,10 @@ class FakeDevice:
                 raise DeviceException("Response lost")
             if action == (6, 2):
                 return {"code": 0, "out": [{"piid": 1, "value": self.settings}]}
+            if action == (2, 5) and not self.ignore_writes:
+                profile = bytes.fromhex(params["in"][0]["value"][5:])
+                self.values[2, 3] = 5
+                self.values[2, 19] = int.from_bytes(profile[3:7], "big")
             if action == (6, 1) and not self.ignore_writes:
                 self.settings = params["in"][0]["value"]
             return {"code": 0, "out": []}

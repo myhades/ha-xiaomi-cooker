@@ -45,7 +45,7 @@ Enter the cooker IP address and token, then select its model or use automatic de
 
 ## Cooking
 
-Select a **Cooking menu** first. The duration selector automatically chooses that recipe's default duration, and the supported taste and automatic keep-warm controls become available. These controls prepare the next cook; selecting a menu or changing its options does not start heating.
+Select a **Cooking menu** first. The duration selector automatically chooses that recipe's default duration, and the supported taste and automatic keep-warm controls become available. Recipes without taste adjustment show **Default** as the only taste option. These controls prepare the next cook; selecting a menu or changing its options does not start heating.
 
 Press **Start cooking** to submit the selected recipe. Press **Stop cooking** to stop independently of the menu selection. After a successful start, the preparation controls reset. On CMC301, the selection also clears if the start result is uncertain; check the cooker state before retrying.
 
@@ -67,15 +67,17 @@ Duration choices use 5- or 10-minute intervals and include each recipe's bounds 
 
 ### Scheduled Completion
 
-On CMC301, **Scheduled completion** is the number of minutes until the meal finishes, not the delay before cooking starts. Set it to 0 for an immediate start. The selected recipe determines whether scheduling is available and the minimum completion time.
+On CMC301, **Scheduled duration** is the number of minutes until the meal finishes, not the delay before cooking starts. Set it to 0 for an immediate start. The selected recipe determines whether scheduling is available and the minimum completion time.
 
-Clear scheduled completion before pressing **Save custom recipe**. Saving changes the cooker's custom recipe without starting it.
+The **Custom recipe** selector saves a bundled recipe with its default parameters to the CMC301 panel without starting it. It shows **Other** for an identified recipe outside the bundled list; Other cannot be selected. The local protocol reports the saved recipe when the panel is in custom mode. Until that is observed, the saved selection is unknown; afterward, the last observed selection is retained until another observation or integration reload.
 
 ### Feedback and Device Settings
 
 Feedback includes the current menu, working status, remaining time and duration. CMC301 also exposes fault codes, remote-control permission, boiling feedback, buzzer and display settings. Other entities depend on the model.
 
 **Panel mode lights** controls the CMC301 panel: on lights all mode indicators with the selected mode flashing; off lights only the selected mode. Raw protocol sensors are disabled by default.
+
+**Panel auto off** offers **Off** and **2–10 minutes**, in one-minute steps.
 
 Temperature comes from recorded temperature history when no direct reading is available; it is not an instantaneous heater or power measurement. Fine and quick rice show five cooking stages based on the official plugin's temperature-history method. Other recipes do not use that stage mapping.
 

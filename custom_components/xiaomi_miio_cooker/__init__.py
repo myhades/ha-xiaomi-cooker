@@ -70,12 +70,20 @@ def _remove_replaced_duration_number(hass, entry, device_unique_id, model=None):
     registry = er.async_get(hass)
     replaced = [("number", "next_duration")]
     if model in {MODEL_CMC301, MODEL_NORMAL3}:
-        replaced.extend(("sensor", key) for key in ("menu", "duration"))
+        replaced.extend(("sensor", key) for key in ("mode", "menu", "duration"))
         replaced.extend(
             ("sensor", key)
             for key in (
                 ("texture",) if model == MODEL_CMC301 else ("taste", "taste_phase")
             )
+        )
+    if model == MODEL_CMC301:
+        replaced.extend(
+            [
+                ("switch", "panel_auto_off"),
+                ("number", "display_timeout"),
+                ("button", "save_panel_recipe"),
+            ]
         )
     for platform, key in replaced:
         entity_id = registry.async_get_entity_id(

@@ -78,6 +78,7 @@ class RecipeParameterEntity(XiaomiMiioCookerEntity):
             "remote_control": "mdi:remote",
             "boiling": "mdi:pot-steam-outline",
             "save_panel_recipe": "mdi:content-save-outline",
+            "panel_recipe": "mdi:book-edit-outline",
         }.get(key)
 
 

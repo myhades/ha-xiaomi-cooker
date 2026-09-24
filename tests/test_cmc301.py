@@ -121,7 +121,11 @@ def test_start_stop_and_save_use_correct_actions(device, metadata):
         0,
     )
     backend.set_panel_recipe(RECIPES[2].profile)
-    panel = device.calls[-1][1]
+    panel = next(
+        params
+        for method, params, _ in device.calls
+        if method == "action" and params["aiid"] == 5
+    )
     assert panel["aiid"] == 5
     assert panel["in"][0]["value"].startswith("info_")
     assert decode_profile(panel["in"][0]["value"][5:])[2] == 4
