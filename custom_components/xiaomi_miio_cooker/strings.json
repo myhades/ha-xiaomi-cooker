@@ -8,16 +8,28 @@
           "token": "Token",
           "model": "Model"
         }
+      },
+      "reconfigure": {
+        "title": "Reconfigure cooker connection",
+        "description": "Enter the cooker IP address. Leave Token blank to keep its current value. The device identity is verified before saving.",
+        "data": {
+          "host": "IP address",
+          "token": "New token (optional)"
+        }
       }
     },
     "error": {
       "cannot_detect_model": "Failed to detect the cooker model automatically",
       "cannot_connect": "Failed to connect to the device",
       "unsupported_model": "Unsupported cooker model",
-      "unknown": "Unexpected error"
+      "unknown": "Unexpected error",
+      "invalid_token": "Token must contain 32 hexadecimal characters",
+      "cannot_verify_identity": "The cooker did not return an identity that can be verified. The connection settings were not changed."
     },
     "abort": {
-      "already_configured": "Device is already configured"
+      "already_configured": "Device is already configured",
+      "wrong_device": "The address points to a different cooker. The connection settings were not changed.",
+      "reconfigure_successful": "The connection settings were updated."
     }
   },
   "entity": {
@@ -27,6 +39,9 @@
       },
       "stop_cooking": {
         "name": "Stop cooking"
+      },
+      "save_panel_recipe": {
+        "name": "Save selected recipe to panel"
       }
     },
     "select": {
@@ -42,8 +57,24 @@
           "refan": "Refan",
           "cooking": "Cooking",
           "sweet_rice": "Sweet rice",
-          "quick_rice": "Quick rice"
+          "quick_rice": "Quick rice",
+          "brown_rice": "Brown rice",
+          "oden": "Oden",
+          "soup": "Soup",
+          "noodles": "Instant noodles",
+          "baby_congee": "Baby congee"
         }
+      },
+      "next_taste": {
+        "name": "Next cooking taste",
+        "state": {
+          "soft": "Soft",
+          "middle": "Middle",
+          "hard": "Hard"
+        }
+      },
+      "next_duration": {
+        "name": "Next cooking duration (minutes)"
       }
     },
     "sensor": {
@@ -54,7 +85,8 @@
           "fine_cook": "Fine cook",
           "quick_cook": "Quick cook",
           "cook_congee": "Cook congee",
-          "keep_warm": "Keep warm"
+          "keep_warm": "Keep warm",
+          "custom": "Panel custom recipe"
         }
       },
       "status": {
@@ -64,7 +96,11 @@
           "idle": "Idle",
           "running": "Running",
           "keep_warm": "Keep warm",
-          "busy": "Busy"
+          "busy": "Busy",
+          "scheduled": "Scheduled cooking",
+          "error": "Error",
+          "updating": "Updating",
+          "completed": "Completed"
         }
       },
       "menu": {
@@ -78,7 +114,13 @@
           "yoghurt": "Yoghurt",
           "refan": "Refan",
           "cooking": "Cooking",
-          "other": "Other"
+          "other": "Other",
+          "brown_rice": "Brown rice",
+          "oden": "Oden",
+          "soup": "Soup",
+          "noodles": "Instant noodles",
+          "baby_congee": "Baby congee",
+          "sweet_rice": "Sweet rice"
         }
       },
       "temperature": {
@@ -131,10 +173,94 @@
         "name": "Taste phase"
       },
       "stage_name": {
-        "name": "Stage name"
+        "name": "Stage name",
+        "state": {
+          "quick_preheat": "Quick preheating",
+          "water_absorption": "Water absorption",
+          "boiling": "Boiling",
+          "gelatinization": "Gelatinization",
+          "simmering": "Simmering"
+        }
       },
       "stage_description": {
-        "name": "Stage description"
+        "name": "Stage description",
+        "state": {
+          "quick_preheat": "Gradually raising the temperature to soften the rice.",
+          "water_absorption": "Raising the temperature while the grains absorb water.",
+          "boiling": "Heating to a boil so the rice cooks evenly.",
+          "gelatinization": "Using high-temperature steam to gelatinize the grains.",
+          "simmering": "Maintaining an even temperature to finish gelatinizing the rice."
+        }
+      },
+      "fault": {
+        "name": "Fault code"
+      },
+      "recipe_id": {
+        "name": "Recipe ID"
+      },
+      "status_code": {
+        "name": "Raw status"
+      },
+      "mode_code": {
+        "name": "Raw mode"
+      },
+      "reset_flag": {
+        "name": "Reset synchronization flag"
+      },
+      "history_samples": {
+        "name": "Recorded temperature samples"
+      },
+      "recorded_temperature": {
+        "name": "Last recorded temperature"
+      },
+      "texture": {
+        "name": "Reported taste",
+        "state": {
+          "soft": "Soft",
+          "middle": "Middle",
+          "hard": "Hard"
+        }
+      },
+      "recipe_type": {
+        "name": "Recipe type",
+        "state": {
+          "official": "Official",
+          "cloud": "Cloud",
+          "custom": "Custom"
+        }
+      }
+    },
+    "number": {
+      "next_finish_in": {
+        "name": "Next cook finishes in"
+      },
+      "display_timeout": {
+        "name": "Display auto-off delay"
+      }
+    },
+    "switch": {
+      "next_auto_keep_warm": {
+        "name": "Next cook auto keep warm"
+      },
+      "panel_auto_off": {
+        "name": "Panel auto off"
+      },
+      "completion_notification": {
+        "name": "Completion notification"
+      },
+      "all_modes_lit": {
+        "name": "Show all cooking modes"
+      },
+      "buzzer": {
+        "name": "Buzzer"
+      }
+    },
+    "binary_sensor": {
+      "remote_control": {
+        "name": "Remote cooking permitted"
+      },
+      "boiling": {
+        "name": "Water boiling"
       }
     }
   },
@@ -152,6 +278,110 @@
           "description": "Profile data which describes the temperature curve."
         }
       }
+    },
+    "start_recipe": {
+      "name": "Start a recipe",
+      "description": "Start a bundled CMC301 or normal3 recipe with parameters. Scheduled completion is supported only on CMC301.",
+      "fields": {
+        "device_id": {
+          "name": "Device"
+        },
+        "recipe": {
+          "name": "Recipe key"
+        },
+        "duration": {
+          "name": "Cooking duration (minutes)"
+        },
+        "finish_in": {
+          "name": "Finish in (minutes)"
+        },
+        "taste": {
+          "name": "Taste"
+        },
+        "auto_keep_warm": {
+          "name": "Automatic keep warm"
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "no_loaded_device": {
+      "message": "No Xiaomi cooker is loaded. Check the integration connection."
+    },
+    "multiple_devices": {
+      "message": "More than one cooker matches. Select a specific device."
+    },
+    "device_not_found": {
+      "message": "The selected device was not found."
+    },
+    "device_not_loaded": {
+      "message": "The selected device has no loaded cooker entry."
+    },
+    "invalid_parameters": {
+      "message": "Invalid cooking parameters. Check the selected recipe and its supported options."
+    },
+    "unsupported_option": {
+      "message": "The selected recipe does not support this option."
+    },
+    "select_recipe": {
+      "message": "Select a cooking recipe first."
+    },
+    "clear_schedule": {
+      "message": "Clear scheduled completion before saving a panel recipe."
+    },
+    "unsupported_recipe": {
+      "message": "This cooker does not support the selected recipe."
+    },
+    "whole_minutes": {
+      "message": "Enter a whole number of minutes."
+    },
+    "invalid_taste": {
+      "message": "Select a supported taste: soft, medium or hard."
+    },
+    "invalid_duration_option": {
+      "message": "Select one of the available cooking durations."
+    },
+    "invalid_recipe": {
+      "message": "The recipe format or checksum is invalid. Use a trusted recipe template."
+    },
+    "invalid_keep_warm": {
+      "message": "Automatic keep-warm must be on or off."
+    },
+    "keep_warm_unsupported": {
+      "message": "This recipe does not support changing automatic keep-warm."
+    },
+    "taste_unsupported": {
+      "message": "Only fine rice supports taste adjustment."
+    },
+    "invalid_finish_in": {
+      "message": "Scheduled completion must be 0–1439 minutes; 0 starts immediately."
+    },
+    "schedule_unsupported": {
+      "message": "This recipe or cooker does not support this scheduling option."
+    },
+    "untrusted_recipe": {
+      "message": "CMC301 accepts only bundled recipes with supported parameter changes."
+    },
+    "duration_out_of_range": {
+      "message": "Cooking duration must be between {minimum} and {maximum} minutes."
+    },
+    "finish_too_soon": {
+      "message": "Scheduled completion must exceed {minimum} minutes, or be 0 for immediate cooking."
+    },
+    "remote_denied": {
+      "message": "The cooker does not currently allow remote cooking."
+    },
+    "cooker_busy": {
+      "message": "The cooker must be idle and free of faults before starting."
+    },
+    "start_unconfirmed": {
+      "message": "The start result is uncertain. Check the cooker before retrying."
+    },
+    "write_unconfirmed": {
+      "message": "The cooker did not confirm the setting change. Refresh its state before retrying."
+    },
+    "command_failed": {
+      "message": "The cooker command failed or its result is uncertain. Check the device before retrying."
     }
   }
 }

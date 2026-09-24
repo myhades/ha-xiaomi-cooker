@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from homeassistant.const import CONF_HOST
-from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
+from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .api import normalize_mac
@@ -37,14 +36,13 @@ class XiaomiMiioCookerEntity(CoordinatorEntity):
         return self._suggested_object_id
 
     @property
-    def device_info(self) -> dict:
+    def device_info(self) -> DeviceInfo:
         """Return device registry information."""
         metadata = self.coordinator.data.device_info
-        device_info: dict[str, object] = {
+        device_info: DeviceInfo = {
             "identifiers": {(DOMAIN, self.coordinator.device_unique_id)},
             "manufacturer": MANUFACTURER,
             "name": DEFAULT_NAME,
-            "configuration_url": f"http://{self.coordinator.config_entry.data[CONF_HOST]}",
         }
 
         if metadata.model:
@@ -59,3 +57,20 @@ class XiaomiMiioCookerEntity(CoordinatorEntity):
             device_info["connections"] = {(CONNECTION_NETWORK_MAC, mac_address)}
 
         return device_info
+
+
+class RecipeParameterEntity(XiaomiMiioCookerEntity):
+    """Shared identity for next-cook controls on supported models."""
+
+    def __init__(self, coordinator, key: str) -> None:
+        super().__init__(coordinator, key, None, key)
+        self.key = key
+
+
+class Cmc301Entity(RecipeParameterEntity):
+    """Base for CMC301 device settings and feedback."""
+
+    @property
+    def reported_value(self):
+        data = self.coordinator.data
+        return data.properties.get(self.key) if data is not None else None

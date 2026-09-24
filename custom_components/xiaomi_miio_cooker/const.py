@@ -14,9 +14,8 @@ MODEL_AUTO = "auto"
 ATTR_PROFILE = "profile"
 
 SERVICE_START = "start"
+SERVICE_START_RECIPE = "start_recipe"
 
-DATA_COORDINATORS = "coordinators"
-DATA_SERVICES_REGISTERED = "services_registered"
 
 DEFAULT_NAME = "Xiaomi Electric Rice Cooker"
 DEFAULT_UPDATE_INTERVAL = timedelta(seconds=30)
@@ -32,7 +31,10 @@ MODEL_NORMAL3 = "chunmi.cooker.normal3"
 MODEL_NORMAL4 = "chunmi.cooker.normal4"
 MODEL_NORMAL5 = "chunmi.cooker.normal5"
 
+MODEL_CMC301 = "xiaomi.cooker.cmc301"
+
 SUPPORTED_MODELS = (
+    MODEL_CMC301,
     MODEL_PRESSURE1,
     MODEL_PRESSURE2,
     MODEL_NORMAL1,
@@ -46,4 +48,7 @@ PLATFORMS = [
     Platform.SENSOR,
     Platform.SELECT,
     Platform.BUTTON,
+    Platform.NUMBER,
+    Platform.SWITCH,
+    Platform.BINARY_SENSOR,
 ]

@@ -2,57 +2,35 @@
 
 from __future__ import annotations
 
-import asyncio
 import homeassistant.helpers.config_validation as cv
-import voluptuous as vol
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_DEVICE_ID, CONF_HOST, CONF_TOKEN
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr
+from homeassistant.const import CONF_HOST, CONF_TOKEN
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.typing import ConfigType
 
 from .api import XiaomiMiioCookerApi, build_unique_id
 from .const import (
-    ATTR_PROFILE,
     CONF_MODEL,
-    DATA_COORDINATORS,
-    DATA_SERVICES_REGISTERED,
     DOMAIN,
     PLATFORMS,
-    SERVICE_START,
 )
-from .coordinator import XiaomiMiioCookerCoordinator
+from .coordinator import XiaomiCookerConfigEntry, XiaomiMiioCookerCoordinator
 from .profiles import get_profiles_for_model
+from .services import async_register_services
 
-SERVICE_START_SCHEMA = vol.Schema(
-    {
-        vol.Optional(ATTR_DEVICE_ID): vol.All(cv.ensure_list, [cv.string]),
-        vol.Required(ATTR_PROFILE): cv.string,
-    }
-)
-
-def _get_domain_data(hass: HomeAssistant) -> dict:
-    """Return the integration data container."""
-    return hass.data.setdefault(
-        DOMAIN,
-        {
-            DATA_COORDINATORS: {},
-            DATA_SERVICES_REGISTERED: False,
-        },
-    )
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the Xiaomi cooker integration."""
-    _get_domain_data(hass)
+    await async_register_services(hass)
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(
+    hass: HomeAssistant, entry: XiaomiCookerConfigEntry
+) -> bool:
     """Set up Xiaomi cooker from a config entry."""
-    domain_data = _get_domain_data(hass)
-
     api = XiaomiMiioCookerApi(
         host=entry.data[CONF_HOST],
         token=entry.data[CONF_TOKEN],
@@ -76,94 +54,28 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
         coordinator.device_unique_id = expected_unique_id
 
-    domain_data[DATA_COORDINATORS][entry.entry_id] = coordinator
-    await _async_register_services(hass)
+    entry.runtime_data = coordinator
+    _remove_replaced_duration_number(hass, entry, coordinator.device_unique_id)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-    entry.async_on_unload(entry.add_update_listener(async_reload_entry))
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Unload a config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-    if not unload_ok:
-        return False
-
-    domain_data = _get_domain_data(hass)
-    domain_data[DATA_COORDINATORS].pop(entry.entry_id, None)
-
-    if not domain_data[DATA_COORDINATORS] and domain_data[DATA_SERVICES_REGISTERED]:
-        hass.services.async_remove(DOMAIN, SERVICE_START)
-        domain_data[DATA_SERVICES_REGISTERED] = False
-
-    return True
-
-
-async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Reload a config entry."""
-    await hass.config_entries.async_reload(entry.entry_id)
-
-
-async def _async_register_services(hass: HomeAssistant) -> None:
-    """Register integration services."""
-    domain_data = _get_domain_data(hass)
-    if domain_data[DATA_SERVICES_REGISTERED]:
-        return
-
-    async def async_start_service(call: ServiceCall) -> None:
-        """Start a cooking profile on the target cooker."""
-        coordinators = _async_resolve_coordinators(hass, call)
-        await asyncio.gather(
-            *(coordinator.async_start(call.data[ATTR_PROFILE]) for coordinator in coordinators)
-        )
-
-    hass.services.async_register(
-        DOMAIN,
-        SERVICE_START,
-        async_start_service,
-        schema=SERVICE_START_SCHEMA,
+def _remove_replaced_duration_number(hass, entry, device_unique_id):
+    """Remove only this entry's obsolete beta duration-number registration."""
+    registry = er.async_get(hass)
+    entity_id = registry.async_get_entity_id(
+        "number", DOMAIN, f"{device_unique_id}_next_duration"
     )
+    if entity_id is not None:
+        old = registry.async_get(entity_id)
+        if old.config_entry_id == entry.entry_id:
+            registry.async_remove(entity_id)
 
-    domain_data[DATA_SERVICES_REGISTERED] = True
 
-
-def _async_resolve_coordinators(
-    hass: HomeAssistant,
-    call: ServiceCall,
-) -> list[XiaomiMiioCookerCoordinator]:
-    """Resolve target coordinators for a service call."""
-    domain_data = _get_domain_data(hass)
-    coordinators = domain_data[DATA_COORDINATORS]
-    device_ids = call.data.get(ATTR_DEVICE_ID)
-
-    if not device_ids:
-        if len(coordinators) == 1:
-            return list(coordinators.values())
-
-        raise HomeAssistantError(
-            "Multiple Xiaomi cookers are configured; target a device_id explicitly."
-        )
-
-    device_registry = dr.async_get(hass)
-    resolved_entry_ids: set[str] = set()
-
-    for device_id in device_ids:
-        device_entry = device_registry.async_get(device_id)
-        if device_entry is None:
-            raise HomeAssistantError(f"Device {device_id} was not found.")
-
-        matched_entry_id = next(
-            (
-                entry_id
-                for entry_id in device_entry.config_entries
-                if entry_id in coordinators
-            ),
-            None,
-        )
-        if matched_entry_id is None:
-            raise HomeAssistantError(f"Device {device_id} does not belong to this integration.")
-
-        resolved_entry_ids.add(matched_entry_id)
-
-    return [coordinators[entry_id] for entry_id in resolved_entry_ids]
+async def async_unload_entry(
+    hass: HomeAssistant, entry: XiaomiCookerConfigEntry
+) -> bool:
+    """Unload a config entry."""
+    # HA clears runtime_data and invokes the entry's unload callbacks.
+    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)

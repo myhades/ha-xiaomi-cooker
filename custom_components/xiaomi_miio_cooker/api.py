@@ -1,320 +1,135 @@
-"""Blocking Xiaomi Electric Rice Cooker client helpers."""
+"""Model dispatch and serialized blocking device access."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-import logging
-from time import monotonic
+import re
+from threading import RLock
 from typing import Any
 
-from miio import Cooker, Device, DeviceException
+from miio import Device, DeviceException
 
-from .const import (
-    DEFAULT_NAME,
-    DOMAIN,
-    SUPPORTED_MODELS,
-    TEMPERATURE_HISTORY_MIN_INTERVAL_SECONDS,
+from .const import MODEL_CMC301, SUPPORTED_MODELS
+from .contracts import CookerBackend, PanelRecipeBackend, SettingsBackend
+from .models import (  # Stable imports used by the HA layer.
+    CookerData,
+    CookerDeviceMetadata,
+    normalize_mac,
 )
-
-_LOGGER = logging.getLogger(__name__)
+from .models import (
+    build_entry_title as build_entry_title,
+)
+from .models import (
+    build_unique_id as build_unique_id,
+)
 
 
 class UnsupportedModelError(Exception):
-    """Raised when the cooker model is unsupported."""
+    """The discovered device has no compatible backend."""
 
 
-@dataclass(slots=True, frozen=True)
-class CookerDeviceMetadata:
-    """Static metadata about a Xiaomi cooker."""
-
-    model: str | None
-    firmware_version: str | None
-    hardware_version: str | None
-    mac_address: str | None
-
-
-@dataclass(slots=True, frozen=True)
-class CookerData:
-    """Combined runtime data for the coordinator."""
-
-    device_info: CookerDeviceMetadata
-    status: "CookerStatusData"
-    settings: "CookerSettingsData | None"
-    interaction_timeouts: "CookerInteractionTimeoutsData | None"
-    temperature: Any | None
-
-
-@dataclass(slots=True, frozen=True)
-class CookerStageData:
-    """Runtime stage data used by the exposed sensors."""
-
-    state: Any
-    rice_id: Any
-    taste: Any
-    taste_phase: Any
-    name: Any
-    description: Any
-
-
-@dataclass(slots=True, frozen=True)
-class CookerStatusData:
-    """Runtime cooker data used by the exposed sensors."""
-
-    mode: Any
-    status: Any
-    menu: Any
-    remaining: Any
-    duration: Any
-    favorite: Any
-    stage: CookerStageData | None
-
-
-@dataclass(slots=True, frozen=True)
-class CookerSettingsData:
-    """Cooker settings exposed by python-miio."""
-
-    led_on: bool | None
-    lid_open_warning: bool | None
-    lid_open_warning_delayed: bool | None
-
-
-@dataclass(slots=True, frozen=True)
-class CookerInteractionTimeoutsData:
-    """Cooker interaction timeout settings exposed by python-miio."""
-
-    led_off: int | None
-    lid_open: int | None
-    lid_open_warning: int | None
-
-
-def normalize_mac(mac_address: str | None) -> str | None:
-    """Normalize a MAC address into aa:bb:cc:dd:ee:ff form."""
-    if not mac_address:
-        return None
-
-    raw_mac = mac_address.lower().replace("-", "").replace(":", "")
-    if len(raw_mac) != 12:
-        return None
-
-    return ":".join(raw_mac[index : index + 2] for index in range(0, 12, 2))
-
-
-def build_unique_id(
-    mac_address: str | None,
-    model: str | None,
-    host: str | None = None,
-) -> str:
-    """Build a stable unique ID for a cooker."""
-    normalized_mac = normalize_mac(mac_address)
-    normalized_model = (model or DOMAIN).replace(".", "_")
-    if normalized_mac:
-        return f"{normalized_model}_{normalized_mac.replace(':', '')}"
-
-    if host:
-        normalized_host = host.strip().lower().replace(":", "_").replace(".", "_")
-        if normalized_host:
-            return f"{normalized_model}_{normalized_host}"
-
-    return f"{normalized_model}_unknown"
-
-
-def build_entry_title() -> str:
-    """Build a config entry title."""
-    return DEFAULT_NAME
-
-
-def _build_stage_data(stage: Any) -> CookerStageData | None:
-    """Convert a python-miio stage object into an immutable snapshot."""
-    if stage is None:
-        return None
-
-    return CookerStageData(
-        state=getattr(stage, "state", None),
-        rice_id=getattr(stage, "rice_id", None),
-        taste=getattr(stage, "taste", None),
-        taste_phase=getattr(stage, "taste_phase", None),
-        name=getattr(stage, "name", None),
-        description=getattr(stage, "description", None),
-    )
-
-
-def _build_status_data(status: Any) -> CookerStatusData:
-    """Convert a python-miio status object into an immutable snapshot."""
-    raw_data = getattr(status, "data", {}) or {}
-    raw_func = str(raw_data.get("func", "")).lower()
-    raw_menu = str(raw_data.get("menu", "")).lower()
-
-    return CookerStatusData(
-        mode=_map_cook_mode(raw_menu),
-        status=_map_work_status(raw_func),
-        menu=_parse_menu(raw_menu),
-        remaining=getattr(status, "remaining", None),
-        duration=getattr(status, "duration", None),
-        favorite=getattr(status, "favorite", None),
-        stage=_build_stage_data(getattr(status, "stage", None)),
-    )
-
-
-def _parse_menu(raw_menu: str) -> int | None:
-    """Parse the raw menu value into an integer."""
-    if not raw_menu:
-        return None
-
-    try:
-        return int(raw_menu, 16)
-    except ValueError:
-        return None
-
-
-def _map_cook_mode(raw_menu: str) -> str:
-    """Map the raw cooker menu value to a stable cook mode enum."""
-    return {
-        "0001": "fine_cook",
-        "0002": "quick_cook",
-        "0003": "cook_congee",
-        "0004": "keep_warm",
-    }.get(raw_menu, "unknown")
-
-
-def _map_work_status(raw_func: str) -> str:
-    """Map the raw func value to a stable work status enum."""
-    return {
-        "waiting": "idle",
-        "running": "running",
-        "cooking": "running",
-        "autokeepwarm": "keep_warm",
-        "keepwarm": "keep_warm",
-        "keep_temp": "keep_warm",
-        "finish": "keep_warm",
-        "finisha": "keep_warm",
-        "precook": "busy",
-        "set02": "busy",
-        "start": "busy",
-        "startp": "busy",
-        "resume": "busy",
-        "resumep": "busy",
-    }.get(raw_func, "unknown")
-
-
-def _build_settings_data(settings: Any) -> CookerSettingsData | None:
-    """Convert python-miio settings into an immutable snapshot."""
-    if settings is None:
-        return None
-
-    return CookerSettingsData(
-        led_on=getattr(settings, "led_on", None),
-        lid_open_warning=getattr(settings, "lid_open_warning", None),
-        lid_open_warning_delayed=getattr(settings, "lid_open_warning_delayed", None),
-    )
-
-
-def _build_interaction_timeouts_data(
-    interaction_timeouts: Any,
-) -> CookerInteractionTimeoutsData | None:
-    """Convert python-miio interaction timeouts into an immutable snapshot."""
-    if interaction_timeouts is None:
-        return None
-
-    return CookerInteractionTimeoutsData(
-        led_off=getattr(interaction_timeouts, "led_off", None),
-        lid_open=getattr(interaction_timeouts, "lid_open", None),
-        lid_open_warning=getattr(interaction_timeouts, "lid_open_warning", None),
-    )
+def normalize_token(value: str) -> str:
+    """Accept Windows whitespace/BOM without including secrets in errors."""
+    token = "".join(value.replace("\ufeff", "").split())
+    if not re.fullmatch(r"[0-9a-fA-F]{32}", token):
+        raise ValueError("Token must be 32 hexadecimal characters")
+    return token.lower()
 
 
 class XiaomiMiioCookerApi:
-    """Blocking API wrapper around python-miio."""
+    """One facade, separate protocols, one lock for polling and commands."""
 
     def __init__(self, host: str, token: str, model: str | None) -> None:
-        """Initialize the cooker client."""
         self.host = host
-        self.token = token
+        self.token = normalize_token(token)
         self.configured_model = model
-        self._device = Device(host, token)
-        self._cooker = Cooker(host, token)
+        self._device = Device(host, self.token)
         self._device_info: CookerDeviceMetadata | None = None
-        self._last_temperature_history_fetch: float | None = None
-        self._cached_temperature_from_history: int | None = None
-        self._last_known_temperature: int | None = None
+        self._backend: CookerBackend | None = None
+        self._lock = RLock()
 
     def validate(self) -> CookerData:
-        """Validate connectivity and return the initial data snapshot."""
         return self.fetch_data(force_device_info=True)
 
     def fetch_device_info(self) -> CookerDeviceMetadata:
-        """Fetch static device metadata for model detection."""
-        return self._get_device_info(force_refresh=True)
+        with self._lock:
+            return self._get_device_info(True)
+
+    def _get_device_info(self, force: bool = False) -> CookerDeviceMetadata:
+        if self._device_info is None or force:
+            info = self._device.info()
+            if info is None:
+                raise DeviceException("No device information returned")
+            self._device_info = CookerDeviceMetadata(
+                model=getattr(info, "model", None) or self.configured_model,
+                firmware_version=getattr(info, "firmware_version", None),
+                hardware_version=getattr(info, "hardware_version", None),
+                mac_address=normalize_mac(
+                    getattr(info, "mac_address", None) or getattr(info, "mac", None)
+                ),
+            )
+        return self._device_info
+
+    def _get_backend(self) -> CookerBackend:
+        metadata = self._get_device_info()
+        model = self.configured_model or metadata.model
+        if model not in SUPPORTED_MODELS:
+            raise UnsupportedModelError(f"Unsupported device: {model}")
+        if (
+            model == MODEL_CMC301 or metadata.model == MODEL_CMC301
+        ) and model != metadata.model:
+            raise UnsupportedModelError(
+                "Configured and discovered cooker protocols differ"
+            )
+        if self._backend is None:
+            if model == MODEL_CMC301:
+                from .cmc301 import Cmc301Backend
+
+                self._backend = Cmc301Backend(self._device, metadata)
+            else:
+                from .legacy import LegacyCookerBackend
+
+                self._backend = LegacyCookerBackend(self.host, self.token, metadata)
+        return self._backend
 
     def fetch_data(self, force_device_info: bool = False) -> CookerData:
-        """Fetch state and optional temperature history."""
-        device_info = self._get_device_info(force_refresh=force_device_info)
-        resolved_model = self.configured_model or device_info.model
-        if resolved_model not in SUPPORTED_MODELS:
-            raise UnsupportedModelError(
-                f"Unsupported device found: {resolved_model or device_info.model}"
-            )
+        with self._lock:
+            self._get_device_info(force_device_info)
+            return self._get_backend().fetch_data()
 
-        raw_status = self._cooker.status()
-        temperature = getattr(raw_status, "temperature", None)
-        if temperature is None:
-            temperature = self._get_temperature_from_history()
-        if temperature is None:
-            temperature = self._last_known_temperature
-        else:
-            self._last_known_temperature = temperature
-
-        return CookerData(
-            device_info=device_info,
-            status=_build_status_data(raw_status),
-            settings=_build_settings_data(getattr(raw_status, "settings", None)),
-            interaction_timeouts=_build_interaction_timeouts_data(
-                getattr(raw_status, "interaction_timeouts", None)
-            ),
-            temperature=temperature,
+    def validate_profile(self, profile: str) -> None:
+        """Preflight all service targets before any start is sent."""
+        model = self.configured_model or (
+            self._device_info.model if self._device_info else None
         )
+        if model == MODEL_CMC301:
+            from .cmc301_profile import validate_bundled_profile
 
-    def _get_temperature_from_history(self) -> int | None:
-        """Read cached temperature history and throttle expensive updates."""
-        now = monotonic()
-        if (
-            self._cached_temperature_from_history is not None
-            and self._last_temperature_history_fetch is not None
-            and now - self._last_temperature_history_fetch
-            < TEMPERATURE_HISTORY_MIN_INTERVAL_SECONDS
-        ):
-            return self._cached_temperature_from_history
-
-        try:
-            temperature_history = self._cooker.get_temperature_history()
-        except DeviceException as err:
-            _LOGGER.debug("Unable to refresh cooker temperature history: %s", err)
-            return self._cached_temperature_from_history
-
-        self._last_temperature_history_fetch = now
-        temperatures = getattr(temperature_history, "temperatures", None)
-        self._cached_temperature_from_history = temperatures[-1] if temperatures else None
-        return self._cached_temperature_from_history
+            validate_bundled_profile(profile)
+        elif len(profile) == 352:
+            raise ValueError("A CMC301 recipe cannot be sent to a legacy cooker")
 
     def start(self, profile: str) -> Any:
-        """Start a cooking profile."""
-        return self._cooker.start(profile)
+        with self._lock:
+            backend = self._get_backend()
+            self.validate_profile(profile)
+            return backend.start(profile)
 
     def stop(self) -> Any:
-        """Stop the current cooking process."""
-        return self._cooker.stop()
+        with self._lock:
+            return self._get_backend().stop()
 
-    def _get_device_info(self, force_refresh: bool = False) -> CookerDeviceMetadata:
-        """Fetch and cache static device metadata."""
-        if self._device_info is not None and not force_refresh:
-            return self._device_info
+    def set_setting(self, key: str, value: Any) -> None:
+        with self._lock:
+            backend = self._get_backend()
+            if not isinstance(backend, SettingsBackend):
+                raise ValueError("Settings control is not supported by this backend")
+            backend.set_setting(key, value)
 
-        info = self._device.info()
-        self._device_info = CookerDeviceMetadata(
-            model=getattr(info, "model", self.configured_model),
-            firmware_version=getattr(info, "firmware_version", None),
-            hardware_version=getattr(info, "hardware_version", None),
-            mac_address=normalize_mac(
-                getattr(info, "mac_address", None) or getattr(info, "mac", None)
-            ),
-        )
-        return self._device_info
+    def set_panel_recipe(self, profile: str) -> None:
+        with self._lock:
+            backend = self._get_backend()
+            if not isinstance(backend, PanelRecipeBackend):
+                raise ValueError(
+                    "Panel recipe control is not supported by this backend"
+                )
+            backend.set_panel_recipe(profile)

@@ -4,23 +4,32 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from dataclasses import replace
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from miio import DeviceException
 
+from . import cmc301_profile, normal3_profile
 from .api import CookerData, UnsupportedModelError, XiaomiMiioCookerApi
+from .cmc301_profile import encode_profile
 from .const import (
     COMMAND_REFRESH_DELAY,
     DEFAULT_NAME,
     DEFAULT_UPDATE_INTERVAL,
     DOMAIN,
+    MODEL_CMC301,
+    MODEL_NORMAL3,
 )
+from .contracts import RecipeCodec
+from .errors import command_error, recipe_error, validation_error
 from .profiles import CookingProfile
+from .recipe_options import RecipeOptions, duration_choices
 
 _LOGGER = logging.getLogger(__name__)
+
+type XiaomiCookerConfigEntry = ConfigEntry[XiaomiMiioCookerCoordinator]
 
 
 class XiaomiMiioCookerCoordinator(DataUpdateCoordinator[CookerData]):
@@ -29,7 +38,7 @@ class XiaomiMiioCookerCoordinator(DataUpdateCoordinator[CookerData]):
     def __init__(
         self,
         hass: HomeAssistant,
-        entry: ConfigEntry,
+        entry: XiaomiCookerConfigEntry,
         api: XiaomiMiioCookerApi,
         profiles: tuple[CookingProfile, ...],
     ) -> None:
@@ -40,6 +49,7 @@ class XiaomiMiioCookerCoordinator(DataUpdateCoordinator[CookerData]):
             name=f"{DOMAIN}_{entry.entry_id}",
             update_interval=DEFAULT_UPDATE_INTERVAL,
             always_update=False,
+            config_entry=entry,
         )
         self.api = api
         self.config_entry = entry
@@ -47,7 +57,70 @@ class XiaomiMiioCookerCoordinator(DataUpdateCoordinator[CookerData]):
         self._command_lock = asyncio.Lock()
         self._profiles = profiles
         self._profiles_by_key = {profile.key: profile for profile in self._profiles}
-        self._selected_profile = None
+        self._selected_profile: str | None = None
+        self._selection_revision = 0
+        self.recipe_options: RecipeOptions | None = None
+        self._refresh_task: asyncio.Task | None = None
+        entry.async_on_unload(self._cancel_delayed_refresh)
+
+    @property
+    def is_cmc301(self) -> bool:
+        return self.config_entry.data.get("model") == MODEL_CMC301
+
+    @property
+    def recipe_codec(self) -> RecipeCodec | None:
+        return {
+            MODEL_CMC301: cmc301_profile,
+            MODEL_NORMAL3: normal3_profile,
+        }.get(self.config_entry.data.get("model"))
+
+    @property
+    def selected_recipe(self) -> CookingProfile | None:
+        return self._profiles_by_key.get(self._selected_profile)
+
+    def supports_option(self, key: str) -> bool:
+        if self.recipe_options is None or self.selected_recipe is None:
+            return False
+        return self.recipe_codec.supports_option(self.selected_recipe.profile, key)
+
+    @property
+    def cooking_duration_options(self) -> list[str]:
+        if not self.supports_option("duration"):
+            return []
+        profile = self.selected_recipe.profile
+        return [
+            str(value)
+            for value in duration_choices(
+                *self.recipe_codec.duration_range(profile),
+                self.recipe_codec.default_options(profile).duration,
+            )
+        ]
+
+    def set_recipe_option(self, key: str, value) -> None:
+        if not self.supports_option(key) or self.recipe_options is None:
+            raise validation_error("unsupported_option")
+        candidate = replace(self.recipe_options, **{key: value})
+        try:
+            self.recipe_codec.encode_profile(self.selected_recipe.profile, candidate)
+        except ValueError as err:
+            raise recipe_error(err) from err
+        self.recipe_options = candidate
+        self.async_update_listeners()
+
+    async def async_set_setting(self, key: str, value) -> None:
+        await self._async_execute_command(self.api.set_setting, key, value)
+
+    async def async_set_panel_recipe(self) -> None:
+        if (
+            not self.is_cmc301
+            or self.selected_recipe is None
+            or self.recipe_options is None
+        ):
+            raise validation_error("select_recipe")
+        if self.recipe_options.finish_in:
+            raise validation_error("clear_schedule")
+        profile = encode_profile(self.selected_recipe.profile, self.recipe_options)
+        await self._async_execute_command(self.api.set_panel_recipe, profile)
 
     @property
     def device_name(self) -> str:
@@ -112,6 +185,18 @@ class XiaomiMiioCookerCoordinator(DataUpdateCoordinator[CookerData]):
         """Start a cooking profile."""
         await self._async_execute_command(self.api.start, profile)
 
+    def prepare_recipe(self, recipe: str, options: dict) -> str:
+        """Build an atomic automation request without changing the UI draft."""
+        if self.recipe_codec is None or recipe not in self._profiles_by_key:
+            raise validation_error("unsupported_recipe")
+        profile = self._profiles_by_key[recipe].profile
+        try:
+            return self.recipe_codec.encode_profile(
+                profile, replace(self.recipe_codec.default_options(profile), **options)
+            )
+        except (ValueError, TypeError) as err:
+            raise recipe_error(err) from err
+
     async def async_stop(self) -> None:
         """Stop the cooking process."""
         await self._async_execute_command(self.api.stop)
@@ -119,34 +204,71 @@ class XiaomiMiioCookerCoordinator(DataUpdateCoordinator[CookerData]):
     async def async_select_cooking_menu(self, option: str) -> None:
         """Select a cooking menu for the start button."""
         if option not in self.cooking_menu_options:
-            raise HomeAssistantError(f"Unsupported cooking menu: {option}")
+            raise validation_error("unsupported_recipe")
 
+        self._set_cooking_selection(option)
+
+    def _set_cooking_selection(self, option: str | None) -> None:
+        """Update the shared selector and its dependent draft together."""
+        options = None
+        if option is not None and self.recipe_codec is not None:
+            options = self.recipe_codec.default_options(
+                self._profiles_by_key[option].profile
+            )
         self._selected_profile = option
+        self.recipe_options = options
+        self._selection_revision += 1
         self.async_update_listeners()
+
+    def _clear_cooking_selection(self, revision: int) -> None:
+        """Do not clear a new selection made while a command was in flight."""
+        if self._selection_revision == revision:
+            self._set_cooking_selection(None)
 
     async def async_start_selected_profile(self) -> None:
-        """Start the currently selected cooking profile."""
-        if not self._profiles:
-            raise HomeAssistantError(
-                "No cooking profiles are available for this cooker model."
-            )
-
-        if self._selected_profile is None:
-            raise HomeAssistantError("Select a cooking menu before starting.")
-
-        selected_profile = self._profiles_by_key[self._selected_profile]
-        await self.async_start(selected_profile.profile)
-        self._selected_profile = None
-        self.async_update_listeners()
+        """Resolve selection under the command lock to prevent duplicate starts."""
+        async with self._command_lock:
+            if self.selected_recipe is None:
+                raise validation_error("select_recipe")
+            revision = self._selection_revision
+            profile = self.selected_recipe.profile
+            if self.recipe_options is not None:
+                try:
+                    profile = self.recipe_codec.encode_profile(
+                        profile, self.recipe_options
+                    )
+                except ValueError as err:
+                    raise recipe_error(err) from err
+            if self.is_cmc301:
+                # A lost response must not leave a one-click repeat armed.
+                self._clear_cooking_selection(revision)
+            await self._run_command(self.api.start, profile)
+            self._clear_cooking_selection(revision)
 
     async def _async_execute_command(self, command, *args) -> None:
-        """Run a blocking command and refresh quickly afterwards."""
         async with self._command_lock:
+            await self._run_command(command, *args)
+
+    async def _run_command(self, command, *args) -> None:
+        """Refresh even after an uncertain write; never repeat the write here."""
+        try:
             await self.hass.async_add_executor_job(command, *args)
+        except DeviceException as err:
+            raise command_error(err) from err
+        except ValueError as err:
+            raise recipe_error(err) from err
+        finally:
             await self.async_refresh()
-            self.hass.async_create_task(self._async_delayed_refresh())
+            self._cancel_delayed_refresh()
+            self._refresh_task = self.hass.async_create_task(
+                self._async_delayed_refresh()
+            )
+
+    def _cancel_delayed_refresh(self) -> None:
+        if self._refresh_task is not None:
+            self._refresh_task.cancel()
+            self._refresh_task = None
 
     async def _async_delayed_refresh(self) -> None:
-        """Perform a follow-up refresh after the device has processed a command."""
         await asyncio.sleep(COMMAND_REFRESH_DELAY)
         await self.async_refresh()

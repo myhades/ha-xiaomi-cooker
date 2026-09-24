@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, replace
 from enum import Enum
-import re
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -12,20 +12,31 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import STATE_UNKNOWN, UnitOfTemperature, UnitOfTime
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DATA_COORDINATORS, DOMAIN
+from .const import MODEL_CMC301, MODEL_NORMAL3
+from .coordinator import XiaomiCookerConfigEntry
 from .entity import XiaomiMiioCookerEntity
-from .profiles import COMMON_MENU_OPTIONS, COMMON_MENU_OTHER, get_menu_key
+from .profiles import (
+    COMMON_MENU_OPTIONS,
+    COMMON_MENU_OTHER,
+    get_cmc301_menu_key,
+    get_menu_key,
+    get_profiles_for_model,
+)
+from .stages import RICE_PHASES
 
 CAMEL_CASE_PATTERN = re.compile(r"(?<!^)(?=[A-Z])")
 MODE_OPTIONS = ("unknown", "fine_cook", "quick_cook", "cook_congee", "keep_warm")
 STATUS_OPTIONS = ("unknown", "idle", "running", "keep_warm", "busy")
 BOOLEAN_OPTIONS = ("off", "on")
+
+
+# Polls and writes are serialized per device by the coordinator/API locks.
+PARALLEL_UPDATES = 0
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -176,13 +187,23 @@ SENSOR_DESCRIPTIONS: tuple[XiaomiCookerSensorDescription, ...] = (
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: ConfigEntry,
+    entry: XiaomiCookerConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Xiaomi cooker sensors from a config entry."""
-    coordinator = hass.data[DOMAIN][DATA_COORDINATORS][entry.entry_id]
+    coordinator = entry.runtime_data
+    descriptions = SENSOR_DESCRIPTIONS
+    if coordinator.is_cmc301:
+        descriptions = cmc301_descriptions()
+    elif entry.data.get("model") == MODEL_NORMAL3:
+        descriptions = tuple(
+            _rice_stage_description(description)
+            if description.key in {"stage_name", "stage_description"}
+            else description
+            for description in descriptions
+        )
     async_add_entities(
-        XiaomiCookerSensor(coordinator, description) for description in SENSOR_DESCRIPTIONS
+        XiaomiCookerSensor(coordinator, description) for description in descriptions
     )
 
 
@@ -220,6 +241,19 @@ class XiaomiCookerSensor(XiaomiMiioCookerEntity, SensorEntity):
         if self.entity_description.enum_options is None:
             return None
 
+        if (
+            not self.coordinator.is_cmc301
+            and self.coordinator.recipe_codec is not None
+            and self.entity_description.key in {"menu", "favorite"}
+        ):
+            return list(
+                dict.fromkeys(
+                    [
+                        *self.entity_description.enum_options,
+                        *self.coordinator.cooking_menu_options,
+                    ]
+                )
+            )
         return list(self.entity_description.enum_options)
 
     @property
@@ -237,17 +271,52 @@ class XiaomiCookerSensor(XiaomiMiioCookerEntity, SensorEntity):
 
         return raw_value
 
+    @property
+    def extra_state_attributes(self):
+        """Keep stage provenance and numeric codes separate from display text."""
+        if self.entity_description.key not in {"stage_name", "stage_description"}:
+            return None
+        data = self.coordinator.data
+        if data is None:
+            return None
+        stage = data.status.stage if data.status is not None else None
+        attributes = {
+            "source": data.properties.get("stage_source"),
+            "stage_code": stage.state if stage is not None else None,
+        }
+        if self.coordinator.is_cmc301:
+            attributes["history_based"] = True
+        elif isinstance(data.properties.get("stage_raw"), str):
+            attributes["raw_stage"] = data.properties["stage_raw"]
+        if self.coordinator.config_entry.data.get("model") == MODEL_NORMAL3:
+            attributes["history_based"] = True
+            attributes["phase_index"] = data.properties.get("history_phase_index")
+        return attributes
+
     def _get_raw_value(self):
         """Return the raw value provided by the coordinator snapshot."""
         data = self.coordinator.data
         if data is None:
             return None
 
+        if (
+            self.coordinator.is_cmc301
+            and self.entity_description.key in data.properties
+        ):
+            value = data.properties[self.entity_description.key]
+            if self.entity_description.key == "texture":
+                return {0: "soft", 1: "middle", 2: "hard"}.get(value)
+            if self.entity_description.key == "recipe_type":
+                return {0: "official", 1: "cloud", 2: "custom"}.get(value)
+            return value
+
         if self.entity_description.key == "temperature":
             return data.temperature
 
         if self.entity_description.key == "panel_display_auto_off":
-            return self._normalize_bool_state(self.coordinator.panel_display_auto_off_enabled)
+            return self._normalize_bool_state(
+                self.coordinator.panel_display_auto_off_enabled
+            )
 
         if self.entity_description.key == "lid_open_warning":
             return self._normalize_bool_state(self.coordinator.lid_open_warning_enabled)
@@ -266,18 +335,23 @@ class XiaomiCookerSensor(XiaomiMiioCookerEntity, SensorEntity):
 
         return getattr(state, self.entity_description.attribute_name, None)
 
-    @staticmethod
-    def _normalize_menu_state(value: int | str | None) -> str | None:
+    def _normalize_menu_state(self, value: int | str | None) -> str | None:
         """Normalize menu IDs into stable enum keys with an other fallback."""
         if value is None:
             return None
 
         if isinstance(value, int):
-            return get_menu_key(value) or COMMON_MENU_OTHER
+            return (
+                get_cmc301_menu_key(value)
+                if self.coordinator.is_cmc301
+                else get_menu_key(
+                    value, self.coordinator.config_entry.data.get("model")
+                )
+            ) or COMMON_MENU_OTHER
 
         raw_value = str(value).strip().lower()
         if raw_value.isdigit():
-            return get_menu_key(int(raw_value)) or COMMON_MENU_OTHER
+            return self._normalize_menu_state(int(raw_value))
 
         return COMMON_MENU_OTHER
 
@@ -303,3 +377,94 @@ class XiaomiCookerSensor(XiaomiMiioCookerEntity, SensorEntity):
             return None
 
         return "on" if value else "off"
+
+
+def _rice_stage_description(description):
+    return replace(
+        description,
+        attribute_name="phase",
+        device_class=SensorDeviceClass.ENUM,
+        enum_options=RICE_PHASES,
+    )
+
+
+def cmc301_descriptions():
+    """Expose only feedback this model actually provides."""
+    descriptions = []
+    for description in SENSOR_DESCRIPTIONS:
+        if description.key not in {
+            "mode",
+            "status",
+            "menu",
+            "remaining",
+            "duration",
+            "stage_name",
+            "stage_description",
+        }:
+            continue
+        if description.key in {"stage_name", "stage_description"}:
+            description = _rice_stage_description(description)
+        elif description.key == "mode":
+            description = replace(description, enum_options=(*MODE_OPTIONS, "custom"))
+        elif description.key == "status":
+            description = replace(
+                description,
+                enum_options=(
+                    *STATUS_OPTIONS,
+                    "scheduled",
+                    "error",
+                    "updating",
+                    "completed",
+                ),
+            )
+        elif description.key == "menu":
+            description = replace(
+                description,
+                enum_options=(
+                    *(p.key for p in get_profiles_for_model(MODEL_CMC301)),
+                    "other",
+                ),
+            )
+        descriptions.append(description)
+    for key in (
+        "fault",
+        "recipe_id",
+        "status_code",
+        "mode_code",
+        "reset_flag",
+        "history_samples",
+    ):
+        descriptions.append(
+            XiaomiCookerSensorDescription(
+                key=key,
+                translation_key=key,
+                attribute_name=key,
+                entity_category=EntityCategory.DIAGNOSTIC,
+            )
+        )
+    descriptions.extend(
+        (
+            XiaomiCookerSensorDescription(
+                key="texture",
+                translation_key="texture",
+                attribute_name="texture",
+                device_class=SensorDeviceClass.ENUM,
+                enum_options=("soft", "middle", "hard"),
+            ),
+            XiaomiCookerSensorDescription(
+                key="recipe_type",
+                translation_key="recipe_type",
+                attribute_name="recipe_type",
+                device_class=SensorDeviceClass.ENUM,
+                enum_options=("official", "cloud", "custom"),
+            ),
+            XiaomiCookerSensorDescription(
+                key="recorded_temperature",
+                translation_key="recorded_temperature",
+                attribute_name="recorded_temperature",
+                device_class=SensorDeviceClass.TEMPERATURE,
+                native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+            ),
+        )
+    )
+    return tuple(descriptions)

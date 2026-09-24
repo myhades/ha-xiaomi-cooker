@@ -1,0 +1,49 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  pytest:
+    name: Pytest (${{ matrix.ha }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - ha: "2026.8.0"
+            requirements: requirements_test_min.txt
+          - ha: "2026.9.3"
+            requirements: requirements_test.txt
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install uv
+          uv pip install --system -r ${{ matrix.requirements }} ruff
+
+      - name: Run Ruff lint
+        run: ruff check custom_components tests
+
+      - name: Check Ruff formatting
+        run: ruff format --check custom_components tests
+
+      - name: Run tests
+        run: pytest -q
+
+      - name: Check backend and recipe contracts
+        run: python -m mypy --follow-imports=silent --ignore-missing-imports --strict tests/typing_contracts.py

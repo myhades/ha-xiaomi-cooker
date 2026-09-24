@@ -5,12 +5,14 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 
 from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DATA_COORDINATORS, DOMAIN
-from .entity import XiaomiMiioCookerEntity
+from .coordinator import XiaomiCookerConfigEntry
+from .entity import Cmc301Entity, XiaomiMiioCookerEntity
+
+# Polls and writes are serialized per device by the coordinator/API locks.
+PARALLEL_UPDATES = 0
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -36,15 +38,18 @@ BUTTON_DESCRIPTIONS: tuple[XiaomiCookerButtonDescription, ...] = (
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: ConfigEntry,
+    entry: XiaomiCookerConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Xiaomi cooker buttons from a config entry."""
-    coordinator = hass.data[DOMAIN][DATA_COORDINATORS][entry.entry_id]
+    coordinator = entry.runtime_data
     async_add_entities(
         XiaomiCookerButton(coordinator, description)
         for description in BUTTON_DESCRIPTIONS
     )
+
+    if coordinator.is_cmc301:
+        async_add_entities([Cmc301PanelButton(coordinator, "save_panel_recipe")])
 
 
 class XiaomiCookerButton(XiaomiMiioCookerEntity, ButtonEntity):
@@ -74,3 +79,12 @@ class XiaomiCookerButton(XiaomiMiioCookerEntity, ButtonEntity):
             return
 
         await self.coordinator.async_stop()
+
+
+class Cmc301PanelButton(Cmc301Entity, ButtonEntity):
+    @property
+    def available(self):
+        return super().available and self.coordinator.selected_recipe is not None
+
+    async def async_press(self):
+        await self.coordinator.async_set_panel_recipe()

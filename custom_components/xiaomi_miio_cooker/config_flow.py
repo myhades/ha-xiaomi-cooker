@@ -7,9 +7,14 @@ from typing import Any
 
 import voluptuous as vol
 from homeassistant import config_entries
+from homeassistant.config_entries import ConfigFlowResult
 from homeassistant.const import CONF_HOST, CONF_TOKEN
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.data_entry_flow import FlowResult
+from homeassistant.helpers.selector import (
+    TextSelector,
+    TextSelectorConfig,
+    TextSelectorType,
+)
 from miio import DeviceException
 
 from .api import (
@@ -17,6 +22,7 @@ from .api import (
     XiaomiMiioCookerApi,
     build_entry_title,
     build_unique_id,
+    normalize_token,
 )
 from .const import CONF_MODEL, DOMAIN, MODEL_AUTO, SUPPORTED_MODELS
 
@@ -55,9 +61,7 @@ async def _async_validate_input(
             raise CannotDetectModel
 
         if metadata.model not in SUPPORTED_MODELS:
-            raise UnsupportedModelError(
-                f"Unsupported device found: {metadata.model}"
-            )
+            raise UnsupportedModelError(f"Unsupported device found: {metadata.model}")
 
     try:
         if configured_model is None:
@@ -82,6 +86,7 @@ async def _async_validate_input(
             data[CONF_HOST],
         ),
         "model": resolved_model,
+        "mac_address": metadata.mac_address,
     }
 
 
@@ -90,16 +95,69 @@ class XiaomiMiioCookerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     VERSION = 1
 
+    async def async_step_reconfigure(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Verify identity before changing connection data, preserving entities."""
+        entry = self._get_reconfigure_entry()
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            data = dict(entry.data)
+            data[CONF_HOST] = user_input[CONF_HOST].strip()
+            try:
+                # A blank password field keeps the stored token without displaying it.
+                submitted_token = user_input.get(CONF_TOKEN, "")
+                if submitted_token.replace("\ufeff", "").strip():
+                    data[CONF_TOKEN] = normalize_token(submitted_token)
+                info = await _async_validate_input(self.hass, data)
+            except ValueError:
+                errors["base"] = "invalid_token"
+            except CannotConnect:
+                errors["base"] = "cannot_connect"
+            except CannotDetectModel:
+                errors["base"] = "cannot_detect_model"
+            except UnsupportedModelError:
+                errors["base"] = "unsupported_model"
+            except Exception:
+                _LOGGER.exception("Unexpected exception during cooker reconfiguration")
+                errors["base"] = "unknown"
+            else:
+                if not info["mac_address"]:
+                    errors["base"] = "cannot_verify_identity"
+                else:
+                    await self.async_set_unique_id(info["unique_id"])
+                    self._abort_if_unique_id_mismatch(reason="wrong_device")
+                    return self.async_update_reload_and_abort(entry, data_updates=data)
+
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
+                        CONF_HOST, default=(user_input or entry.data)[CONF_HOST]
+                    ): str,
+                    vol.Optional(CONF_TOKEN): TextSelector(
+                        TextSelectorConfig(type=TextSelectorType.PASSWORD)
+                    ),
+                }
+            ),
+            errors=errors,
+        )
+
     async def async_step_user(
         self,
         user_input: dict[str, Any] | None = None,
-    ) -> FlowResult:
+    ) -> ConfigFlowResult:
         """Handle the initial step."""
         errors: dict[str, str] = {}
 
         if user_input is not None:
             try:
+                user_input[CONF_TOKEN] = normalize_token(user_input[CONF_TOKEN])
+                user_input[CONF_HOST] = user_input[CONF_HOST].strip()
                 info = await _async_validate_input(self.hass, user_input)
+            except ValueError:
+                errors["base"] = "invalid_token"
             except CannotDetectModel:
                 errors["base"] = "cannot_detect_model"
             except CannotConnect:
@@ -144,9 +202,8 @@ class XiaomiMiioCookerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         }
         schema: dict = {
             vol.Required(CONF_HOST, default=user_input.get(CONF_HOST, "")): str,
-            vol.Required(CONF_TOKEN, default=user_input.get(CONF_TOKEN, "")): vol.All(
-                str,
-                vol.Length(min=32, max=32),
+            vol.Required(CONF_TOKEN): TextSelector(
+                TextSelectorConfig(type=TextSelectorType.PASSWORD)
             ),
             vol.Required(
                 CONF_MODEL,

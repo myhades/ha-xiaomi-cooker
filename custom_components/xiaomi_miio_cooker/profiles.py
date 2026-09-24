@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+import json
+import re
 from dataclasses import dataclass
 from functools import lru_cache
-import json
 from pathlib import Path
-import re
 
 from .const import (
+    MODEL_CMC301,
     MODEL_NORMAL2,
     MODEL_NORMAL3,
     MODEL_NORMAL4,
@@ -39,9 +40,7 @@ PROFILE_GROUP_MODELS: dict[str, tuple[str, ...]] = {
 }
 
 MODEL_TO_PROFILE_GROUP = {
-    model: group
-    for group, models in PROFILE_GROUP_MODELS.items()
-    for model in models
+    model: group for group, models in PROFILE_GROUP_MODELS.items() for model in models
 }
 
 
@@ -83,6 +82,10 @@ def _load_profiles_by_group() -> dict[str, tuple[CookingProfile, ...]]:
 
 def get_profiles_for_model(model: str | None) -> tuple[CookingProfile, ...]:
     """Return supported cooking profiles for a given cooker model."""
+    if model == MODEL_CMC301:
+        return _load_cmc301_profiles()
+    if model == MODEL_NORMAL3:
+        return _load_normal3_profiles()
     if model is None:
         return ()
 
@@ -93,9 +96,52 @@ def get_profiles_for_model(model: str | None) -> tuple[CookingProfile, ...]:
     return _load_profiles_by_group().get(group, ())
 
 
-def get_menu_key(menu_id: int | None) -> str | None:
+def get_menu_key(menu_id: int | None, model: str | None = None) -> str | None:
     """Return the stable enum key for a known common menu ID."""
     if menu_id is None:
         return None
+    if model == MODEL_NORMAL3:
+        for recipe in _load_normal3_profiles():
+            if int(recipe.profile[:4], 16) == menu_id:
+                return recipe.key
 
     return COMMON_MENU_ID_TO_KEY.get(menu_id)
+
+
+@lru_cache(maxsize=1)
+def _load_normal3_profiles() -> tuple[CookingProfile, ...]:
+    from .normal3_profile import decode_profile
+
+    raw = json.loads(
+        Path(__file__).with_name("normal3_recipes.json").read_text(encoding="utf-8")
+    )
+    profiles = []
+    for item in raw["recipes"]:
+        decode_profile(item["profile"])
+        profiles.append(
+            CookingProfile(item["key"], item["name"], item["name"], item["profile"])
+        )
+    return tuple(profiles)
+
+
+@lru_cache(maxsize=1)
+def _load_cmc301_profiles() -> tuple[CookingProfile, ...]:
+    from .cmc301_profile import decode_profile
+
+    raw = json.loads(
+        Path(__file__).with_name("cmc301_recipes.json").read_text(encoding="utf-8")
+    )
+    profiles = []
+    for item in raw["recipes"]:
+        decode_profile(item["profile"])
+        profiles.append(
+            CookingProfile(item["key"], item["name"], item["name"], item["profile"])
+        )
+    return tuple(profiles)
+
+
+def get_cmc301_menu_key(menu_id: int) -> str:
+    for recipe in _load_cmc301_profiles():
+        if int(recipe.profile[6:14], 16) == menu_id:
+            return recipe.key
+    return COMMON_MENU_OTHER

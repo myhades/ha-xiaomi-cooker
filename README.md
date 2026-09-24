@@ -1,93 +1,120 @@
 # Xiaomi Electric Rice Cooker
 
-Custom Home Assistant integration for Xiaomi Electric Rice Cookers.
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
+[![HACS](https://img.shields.io/badge/HACS-Custom-yellow.svg)](https://hacs.xyz/)
+[![Maintainer](https://img.shields.io/badge/maintainer-%40myhades-green)](https://github.com/myhades)
+[![Release](https://img.shields.io/github/v/release/myhades/xiaomi_cooker)](https://github.com/myhades/xiaomi_cooker/releases)
 
-This integration is based on the original xiaomi_cooker project by Syssi and uses python-miio by Rytilahti for device communication. It has been updated to follow current Home Assistant integration patterns, including config flow and unique IDs.
+Xiaomi Electric Rice Cooker integrates Xiaomi and Chunmi rice cookers into Home Assistant through local communication.
 
+## Supported Devices
 
-## Credits
+| Name | Model | Model no. |
+|------|-------|-----------|
+| Mi Smart Small Rice Cooker 2 | xiaomi.cooker.cmc301 | CMC301 |
+| Mi Rice Cooker | chunmi.cooker.normal3 | |
 
-- Original integration: [Syssi](https://github.com/syssi/xiaomi_cooker)
-- Device communication library: [Rytilahti](https://github.com/rytilahti/python-miio)
+## Installation
 
+Home Assistant Core must be `2026.8.0` or newer.
 
-## Supported devices
-
-| Name                      | Model                  | Model no.             |
-| ------------------------- | ---------------------- | --------------------- |
-|                           | chunmi.cooker.normal1  | IHFB01CM              |
-| Mi IH Rice Cooker         | chunmi.cooker.normal2  | IHFB01CM, 2016DP1293  |
-|                           | chunmi.cooker.normal3  |                       |
-|                           | chunmi.cooker.normal4  |                       |
-|                           | chunmi.cooker.normal5  |                       |
-| Mi Smart Pressure Cooker  | chunmi.cooker.press1   | YLIH01CM              |
-|                           | chunmi.cooker.press2   |                       |
-
-Note that `chunmi.cooker.normal1` does not have built-in cooking profiles and config entities.
-
-## Features
-
-* Sensors
-  - mode
-  - menu
-  - temperature
-  - remaining
-  - duration
-  - favorite
-  - panel display auto off
-  - lid open alarm
-  - lid open timeout
-  - status
-  - rice_id (available while cooking)
-  - taste (available while cooking)
-  - taste_phase (available while cooking)
-  - stage_name (available while cooking)
-  - stage_description (available while cooking)
-* Selects
-  - cooking menu
-* Buttons
-  - start cooking
-  - stop cooking
-
-
-## Install
+Choose your preferred installation method, and reboot Home Assistant afterward.
 
 ### Method 1: Through HACS
 
-Navigate to "HACS" > "Xiaomi Electric Rice Cooker" or use the My button below.
+This repository is not in the default list yet. To add it, use the My button below, or navigate to **HACS > Overflow menu > Custom repositories** and enter:
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=myhades&repository=xiaomi_cooker&category=integration)
+- **Repository:** `https://github.com/myhades/xiaomi_cooker`
+- **Type:** Integration
+
+Then, navigate to **HACS > Xiaomi Electric Rice Cooker** and install the integration.
+
+[![Open your Home Assistant instance and open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=myhades&repository=xiaomi_cooker&category=integration)
 
 ### Method 2: Manually
 
-Download the repo and copy the folder `/custom_components/xiaomi_miio_cooker` into your Home Assistant's `/config/custom_components` directory.
+Download the repository and copy the `/custom_components/xiaomi_miio_cooker` folder into your Home Assistant `/config/custom_components` directory.
 
+## Configuration
 
-## Setup
+To add the integration, navigate to **Settings > Devices & services > Add integration > Xiaomi Electric Rice Cooker**, or use the My button below. Then follow the configuration flow.
 
-To add the integration, navigate to "Settings"  > "Devices & services"  > "Add integration"  > "Xiaomi Electric Rice Cooker" or use the My button below. Then, follow the config flow.
+[![Add Xiaomi Electric Rice Cooker to Home Assistant.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=xiaomi_miio_cooker)
 
-[![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=xiaomi_miio_cooker)
+Enter the cooker IP address and token, then select its model or use automatic detection. To change the IP address or token later, select **Reconfigure** from the integration menu. Leave the token blank to keep its current value. The integration verifies the cooker identity before saving changes, preserving existing entities.
 
+## Cooking
+
+Select a **Cooking menu** first. The duration selector automatically chooses that recipe's default duration, and the supported taste and automatic keep-warm controls become available. These controls prepare the next cook; selecting a menu or changing its options does not start heating.
+
+Press **Start cooking** to submit the selected recipe. Press **Stop cooking** to stop independently of the menu selection. After a successful start, the preparation controls reset. On CMC301, the selection also clears if the start result is uncertain; check the cooker state before retrying.
+
+| Feature | CMC301 | normal3 |
+|---------|--------|---------|
+| Bundled recipes | 13 | 11 |
+| Cooking duration | Recipe-specific options | Recipe-specific options |
+| Taste | Fine rice only | Fine rice only |
+| Automatic keep-warm | Supported recipes | Supported recipes |
+| Scheduled completion | Supported recipes | Not exposed as a preparation control |
+| Save recipe to panel | Supported | Not exposed |
+| Cooking stage and description | Fine and quick rice | Fine and quick rice |
+
+Duration choices use 5- or 10-minute intervals and include each recipe's bounds and default. Fixed-duration recipes provide one option. Automatic keep-warm is a parameter for the next recipe, not a general live toggle during cooking.
+
+## Additional Configuration
+
+### Scheduled Completion
+
+On CMC301, **Scheduled completion** is the number of minutes until the meal finishes, not the delay before cooking starts. Set it to 0 for an immediate start. The selected recipe determines whether scheduling is available and the minimum completion time.
+
+Clear scheduled completion before pressing **Save selected recipe to panel**. Saving changes the cooker's custom recipe without starting it.
+
+### Feedback and Device Settings
+
+Feedback includes the current menu, working status, remaining time and duration. CMC301 also exposes fault codes, remote-control permission, boiling feedback, buzzer and display settings. Other entities depend on the model.
+
+Temperature comes from recorded temperature history when no direct reading is available; it is not an instantaneous heater or power measurement. Fine and quick rice show five cooking stages based on the official plugin's temperature-history method. Other recipes do not use that stage mapping.
 
 ## Actions
 
-#### `xiaomi_miio_cooker.start`
+### Start a Recipe
 
-Start cooking a custom profile.
+Use `xiaomi_miio_cooker.start_recipe` to submit a recipe and its parameters together, without changing the preparation controls. For example, schedule a 120-minute congee recipe on CMC301 to finish in 480 minutes:
 
-| Attribute       | Optional | Description                         |
-| --------------- | -------- | ----------------------------------- |
-| `device_id`     |   yes    | Required if multiple cookers exist. |
-| `profile`       |   no     | Temperature curve string.           |
+```yaml
+action: xiaomi_miio_cooker.start_recipe
+data:
+  device_id: YOUR_CMC301_DEVICE_ID
+  recipe: zhuzhou
+  duration: 120
+  auto_keep_warm: true
+  finish_in: 480
+```
 
+Both CMC301 and normal3 support this action. Only CMC301 accepts `finish_in`; omit it for normal3. Only `jingzhu` accepts `taste: soft|middle|hard`. Omitted parameters use the bundled recipe defaults. Specify `device_id` when more than one cooker is loaded.
+
+### Start a Custom Profile
+
+`xiaomi_miio_cooker.start` accepts `profile` and an optional `device_id`. normal3 uses its own profile format. CMC301 accepts only bundled heating programs with supported parameter changes.
 
 ## Feedback
-You can enable debug logging in the UI (if possible) or add the following to your Home Assistant configuration:
-```
+
+When reporting an issue, include your setup, diagnostics, and logs.
+
+Select **Download diagnostics** from the integration menu to export cached feedback without tokens, network addresses or device identifiers. This does not poll or control the cooker.
+
+You can enable debug logging in the UI when available, or add the following to your Home Assistant configuration:
+
+```yaml
 logger:
-  default: warning
   logs:
     custom_components.xiaomi_miio_cooker: debug
-    miio: debug
 ```
+
+## Thanks
+
+Thanks to [Syssi](https://github.com/syssi/xiaomi_cooker) for the original integration and [Rytilahti and the python-miio contributors](https://github.com/rytilahti/python-miio) for the device communication library. This project retains the original Apache 2.0 license.
+
+## Disclaimer
+
+This is an unofficial community integration and is not affiliated with, endorsed by, or supported by Xiaomi or Chunmi. Xiaomi and Chunmi are trademarks of their respective owners.

@@ -15,3 +15,64 @@ start:
       example: 0001E10100000000000080026E10082B126E1412698CAA555555550014280A6E0C02050506050505055A14040A0C0C0D00040505060A0F086E6E20000C0A5A28036468686A0004040500000000000000010202020204040506070708001212180C1E2D2D37000000000000000000000099A5
       selector:
         text:
+start_recipe:
+  name: Start a recipe
+  description: Start a bundled CMC301 or normal3 recipe with parameters. Scheduled completion is supported only on CMC301.
+  fields:
+    device_id:
+      name: Device
+      selector:
+        device:
+          integration: xiaomi_miio_cooker
+    recipe:
+      name: Recipe
+      required: true
+      example: zhuzhou
+      selector:
+        select:
+          options:
+            - kuaizhu
+            - jingzhu
+            - zhuzhou
+            - baowen
+            - sweet_rice
+            - brown_rice
+            - oden
+            - refan
+            - soup
+            - cake
+            - noodles
+            - baby_congee
+            - yoghurt
+    duration:
+      name: Cooking duration
+      description: Whole minutes within the recipe's limits. Omit to use its default.
+      selector:
+        number:
+          min: 1
+          max: 1440
+          mode: box
+          unit_of_measurement: min
+    finish_in:
+      name: Finish in
+      description: Minutes until completion, not a delay before starting. Zero starts immediately.
+      selector:
+        number:
+          min: 0
+          max: 1439
+          mode: box
+          unit_of_measurement: min
+    taste:
+      name: Taste
+      description: Fine rice only.
+      selector:
+        select:
+          options:
+            - soft
+            - middle
+            - hard
+    auto_keep_warm:
+      name: Automatic keep warm
+      description: Keep warm after cooking, for recipes that support it.
+      selector:
+        boolean:
