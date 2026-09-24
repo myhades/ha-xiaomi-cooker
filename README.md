@@ -3,9 +3,9 @@
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 [![HACS](https://img.shields.io/badge/HACS-Custom-yellow.svg)](https://hacs.xyz/)
 [![Maintainer](https://img.shields.io/badge/maintainer-%40myhades-green)](https://github.com/myhades)
-[![Release](https://img.shields.io/github/v/release/myhades/xiaomi_cooker)](https://github.com/myhades/xiaomi_cooker/releases)
+[![Release](https://img.shields.io/github/v/release/myhades/ha-xiaomi-cooker)](https://github.com/myhades/ha-xiaomi-cooker/releases)
 
-Xiaomi Electric Rice Cooker integrates Xiaomi and Chunmi rice cookers into Home Assistant through local communication.
+Xiaomi Electric Rice Cooker integrates Xiaomi rice cookers into Home Assistant through local communication.
 
 ## Supported Devices
 
@@ -24,12 +24,12 @@ Choose your preferred installation method, and reboot Home Assistant afterward.
 
 This repository is not in the default list yet. To add it, use the My button below, or navigate to `HACS > Overflow menu > Custom repositories` and enter:
 
-- `Repository`: `https://github.com/myhades/xiaomi_cooker`
+- `Repository`: `https://github.com/myhades/ha-xiaomi-cooker`
 - `Type`: Integration
 
 Then, navigate to `HACS > Xiaomi Electric Rice Cooker` and install the integration.
 
-[![Open your Home Assistant instance and open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=myhades&repository=xiaomi_cooker&category=integration)
+[![Open your Home Assistant instance and open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=myhades&repository=ha-xiaomi-cooker&category=integration)
 
 ### Method 2: Manually
 
