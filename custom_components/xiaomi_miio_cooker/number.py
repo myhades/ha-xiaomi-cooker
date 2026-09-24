@@ -45,7 +45,8 @@ class Cmc301Number(Cmc301Entity, NumberEntity):
         return super().available and (
             self.reported_value is not None
             if self.option == "display_timeout"
-            else self.coordinator.supports_option(self.option)
+            else not self.coordinator.cooking_active
+            and self.coordinator.supports_option(self.option)
         )
 
     @property

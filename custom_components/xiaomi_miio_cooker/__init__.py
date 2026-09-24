@@ -12,6 +12,8 @@ from .api import XiaomiMiioCookerApi, build_unique_id
 from .const import (
     CONF_MODEL,
     DOMAIN,
+    MODEL_CMC301,
+    MODEL_NORMAL3,
     PLATFORMS,
 )
 from .coordinator import XiaomiCookerConfigEntry, XiaomiMiioCookerCoordinator
@@ -55,22 +57,34 @@ async def async_setup_entry(
         coordinator.device_unique_id = expected_unique_id
 
     entry.runtime_data = coordinator
-    _remove_replaced_duration_number(hass, entry, coordinator.device_unique_id)
+    _remove_replaced_duration_number(
+        hass, entry, coordinator.device_unique_id, entry.data.get(CONF_MODEL)
+    )
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
-def _remove_replaced_duration_number(hass, entry, device_unique_id):
-    """Remove only this entry's obsolete beta duration-number registration."""
+def _remove_replaced_duration_number(hass, entry, device_unique_id, model=None):
+    """Remove only this entry's controls superseded by shared selectors."""
     registry = er.async_get(hass)
-    entity_id = registry.async_get_entity_id(
-        "number", DOMAIN, f"{device_unique_id}_next_duration"
-    )
-    if entity_id is not None:
-        old = registry.async_get(entity_id)
-        if old.config_entry_id == entry.entry_id:
-            registry.async_remove(entity_id)
+    replaced = [("number", "next_duration")]
+    if model in {MODEL_CMC301, MODEL_NORMAL3}:
+        replaced.extend(("sensor", key) for key in ("menu", "duration"))
+        replaced.extend(
+            ("sensor", key)
+            for key in (
+                ("texture",) if model == MODEL_CMC301 else ("taste", "taste_phase")
+            )
+        )
+    for platform, key in replaced:
+        entity_id = registry.async_get_entity_id(
+            platform, DOMAIN, f"{device_unique_id}_{key}"
+        )
+        if entity_id is not None:
+            old = registry.async_get(entity_id)
+            if old is not None and old.config_entry_id == entry.entry_id:
+                registry.async_remove(entity_id)
 
 
 async def async_unload_entry(

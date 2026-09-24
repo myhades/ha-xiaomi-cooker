@@ -201,6 +201,7 @@ async def async_setup_entry(
             if description.key in {"stage_name", "stage_description"}
             else description
             for description in descriptions
+            if description.key not in {"menu", "duration", "taste", "taste_phase"}
         )
     async_add_entities(
         XiaomiCookerSensor(coordinator, description) for description in descriptions
@@ -234,6 +235,9 @@ class XiaomiCookerSensor(XiaomiMiioCookerEntity, SensorEntity):
         self._attr_native_unit_of_measurement = description.native_unit_of_measurement
         self._attr_state_class = description.state_class
         self._attr_entity_category = description.entity_category
+        self._attr_entity_registry_enabled_default = (
+            description.entity_registry_enabled_default
+        )
 
     @property
     def options(self) -> list[str] | None:
@@ -395,9 +399,7 @@ def cmc301_descriptions():
         if description.key not in {
             "mode",
             "status",
-            "menu",
             "remaining",
-            "duration",
             "stage_name",
             "stage_description",
         }:
@@ -405,7 +407,12 @@ def cmc301_descriptions():
         if description.key in {"stage_name", "stage_description"}:
             description = _rice_stage_description(description)
         elif description.key == "mode":
-            description = replace(description, enum_options=(*MODE_OPTIONS, "custom"))
+            description = replace(
+                description,
+                enum_options=(*MODE_OPTIONS, "custom"),
+                entity_category=EntityCategory.DIAGNOSTIC,
+                entity_registry_enabled_default=False,
+            )
         elif description.key == "status":
             description = replace(
                 description,
@@ -440,23 +447,21 @@ def cmc301_descriptions():
                 translation_key=key,
                 attribute_name=key,
                 entity_category=EntityCategory.DIAGNOSTIC,
+                entity_registry_enabled_default=key == "fault",
+                icon="mdi:alert-circle-outline" if key == "fault" else "mdi:code-tags",
             )
         )
     descriptions.extend(
         (
-            XiaomiCookerSensorDescription(
-                key="texture",
-                translation_key="texture",
-                attribute_name="texture",
-                device_class=SensorDeviceClass.ENUM,
-                enum_options=("soft", "middle", "hard"),
-            ),
             XiaomiCookerSensorDescription(
                 key="recipe_type",
                 translation_key="recipe_type",
                 attribute_name="recipe_type",
                 device_class=SensorDeviceClass.ENUM,
                 enum_options=("official", "cloud", "custom"),
+                icon="mdi:book-open-variant",
+                entity_category=EntityCategory.DIAGNOSTIC,
+                entity_registry_enabled_default=False,
             ),
             XiaomiCookerSensorDescription(
                 key="recorded_temperature",

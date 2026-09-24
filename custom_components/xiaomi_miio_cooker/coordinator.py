@@ -24,7 +24,7 @@ from .const import (
 )
 from .contracts import RecipeCodec
 from .errors import command_error, recipe_error, validation_error
-from .profiles import CookingProfile
+from .profiles import CookingProfile, get_cmc301_menu_key, get_menu_key
 from .recipe_options import RecipeOptions, duration_choices
 
 _LOGGER = logging.getLogger(__name__)
@@ -78,6 +78,41 @@ class XiaomiMiioCookerCoordinator(DataUpdateCoordinator[CookerData]):
     def selected_recipe(self) -> CookingProfile | None:
         return self._profiles_by_key.get(self._selected_profile)
 
+    @property
+    def cooking_active(self) -> bool:
+        return self.data is not None and self.data.status.status in {
+            "running",
+            "scheduled",
+            "keep_warm",
+            "busy",
+        }
+
+    @property
+    def displayed_menu(self) -> str | None:
+        if not self.cooking_active:
+            return self._selected_profile
+        menu = self.data.status.menu
+        key = (
+            get_cmc301_menu_key(menu)
+            if self.is_cmc301
+            else get_menu_key(menu, self.config_entry.data.get("model"))
+        )
+        if key in self._profiles_by_key:
+            return key
+        return "other" if menu is not None else None
+
+    def displayed_parameter(self, key: str):
+        if not self.cooking_active:
+            return getattr(self.recipe_options, key, None)
+        if key == "duration":
+            return self.data.status.duration
+        if key == "taste" and self.displayed_menu == "jingzhu":
+            if self.is_cmc301:
+                return self.data.properties.get("texture")
+            stage = self.data.status.stage
+            return stage.taste_phase if stage is not None else None
+        return None
+
     def supports_option(self, key: str) -> bool:
         if self.recipe_options is None or self.selected_recipe is None:
             return False
@@ -97,6 +132,8 @@ class XiaomiMiioCookerCoordinator(DataUpdateCoordinator[CookerData]):
         ]
 
     def set_recipe_option(self, key: str, value) -> None:
+        if self.cooking_active:
+            raise validation_error("cooker_busy")
         if not self.supports_option(key) or self.recipe_options is None:
             raise validation_error("unsupported_option")
         candidate = replace(self.recipe_options, **{key: value})
@@ -203,6 +240,8 @@ class XiaomiMiioCookerCoordinator(DataUpdateCoordinator[CookerData]):
 
     async def async_select_cooking_menu(self, option: str) -> None:
         """Select a cooking menu for the start button."""
+        if self.cooking_active:
+            raise validation_error("cooker_busy")
         if option not in self.cooking_menu_options:
             raise validation_error("unsupported_recipe")
 
@@ -228,6 +267,8 @@ class XiaomiMiioCookerCoordinator(DataUpdateCoordinator[CookerData]):
     async def async_start_selected_profile(self) -> None:
         """Resolve selection under the command lock to prevent duplicate starts."""
         async with self._command_lock:
+            if self.cooking_active:
+                raise validation_error("cooker_busy")
             if self.selected_recipe is None:
                 raise validation_error("select_recipe")
             revision = self._selection_revision

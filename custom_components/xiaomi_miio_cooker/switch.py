@@ -59,7 +59,11 @@ class Cmc301Switch(Cmc301Entity, SwitchEntity):
 class RecipeKeepWarmSwitch(RecipeParameterEntity, SwitchEntity):
     @property
     def available(self):
-        return super().available and self.coordinator.supports_option("auto_keep_warm")
+        return (
+            super().available
+            and not self.coordinator.cooking_active
+            and self.coordinator.supports_option("auto_keep_warm")
+        )
 
     @property
     def is_on(self):

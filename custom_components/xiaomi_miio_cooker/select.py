@@ -76,11 +76,13 @@ class XiaomiCookerSelect(XiaomiMiioCookerEntity, SelectEntity):
     @property
     def current_option(self) -> str | None:
         """Return the currently selected option."""
-        return self.coordinator.selected_cooking_menu
+        return self.coordinator.displayed_menu
 
     @property
     def options(self) -> list[str]:
         """Return the available options."""
+        if self.coordinator.cooking_active:
+            return [self.current_option] if self.current_option is not None else []
         return self.coordinator.cooking_menu_options
 
     async def async_select_option(self, option: str) -> None:
@@ -90,15 +92,28 @@ class XiaomiCookerSelect(XiaomiMiioCookerEntity, SelectEntity):
 
 class RecipeTasteSelect(RecipeParameterEntity, SelectEntity):
     _attr_options: ClassVar[list[str]] = ["soft", "middle", "hard"]
+    _attr_icon = "mdi:rice"
 
     @property
     def available(self):
-        return super().available and self.coordinator.supports_option("taste")
+        return super().available and (
+            self.current_option is not None
+            if self.coordinator.cooking_active
+            else self.coordinator.supports_option("taste")
+        )
 
     @property
     def current_option(self):
-        options = self.coordinator.recipe_options
-        return self._attr_options[options.taste] if options is not None else None
+        value = self.coordinator.displayed_parameter("taste")
+        return (
+            self._attr_options[value] if type(value) is int and 0 <= value < 3 else None
+        )
+
+    @property
+    def options(self):
+        if self.coordinator.cooking_active:
+            return [self.current_option] if self.current_option is not None else []
+        return self._attr_options
 
     async def async_select_option(self, option):
         if option not in self._attr_options:
@@ -111,16 +126,22 @@ class RecipeDurationSelect(RecipeParameterEntity, SelectEntity):
 
     @property
     def available(self):
-        return super().available and self.coordinator.supports_option("duration")
+        return super().available and (
+            self.current_option is not None
+            if self.coordinator.cooking_active
+            else self.coordinator.supports_option("duration")
+        )
 
     @property
     def options(self):
+        if self.coordinator.cooking_active:
+            return [self.current_option] if self.current_option is not None else []
         return self.coordinator.cooking_duration_options
 
     @property
     def current_option(self):
-        options = self.coordinator.recipe_options
-        return str(options.duration) if options is not None else None
+        value = self.coordinator.displayed_parameter("duration")
+        return str(value) if value is not None else None
 
     async def async_select_option(self, option):
         if option not in self.options:

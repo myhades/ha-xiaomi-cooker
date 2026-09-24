@@ -1,4 +1,5 @@
 import asyncio
+from dataclasses import replace
 from unittest.mock import AsyncMock
 
 import pytest
@@ -14,6 +15,68 @@ from custom_components.xiaomi_miio_cooker import (
     switch,
 )
 from custom_components.xiaomi_miio_cooker.cmc301_profile import decode_profile
+from custom_components.xiaomi_miio_cooker.models import CookerStageData
+
+
+@pytest.mark.parametrize("cmc", [False, True])
+async def test_selectors_show_live_feedback_without_arming_start(
+    hass, make_coordinator, cmc
+):
+    coordinator = make_coordinator(cmc)
+    entities = await setup_platforms(hass, coordinator)
+    menu, taste, duration = entities["select"]
+    start = entities["button"][0]
+    assert not start.available
+    stage = CookerStageData(None, None, 66, 2, None, None)
+    snapshot = replace(
+        coordinator.data,
+        status=replace(
+            coordinator.data.status,
+            status="running",
+            menu=2 if cmc else 1,
+            duration=63,
+            stage=stage,
+        ),
+        properties={**coordinator.data.properties, "texture": 2},
+    )
+    coordinator.async_set_updated_data(snapshot)
+    assert menu.current_option == "jingzhu"
+    assert menu.options == ["jingzhu"]
+    assert taste.available and taste.current_option == "hard"
+    assert taste.options == ["hard"]
+    assert duration.available and duration.current_option == "63"
+    assert duration.options == ["63"]  # Device value need not lie on the editing grid.
+    assert coordinator.selected_recipe is None and not start.available
+    for operation in (
+        menu.async_select_option("kuaizhu"),
+        taste.async_select_option("soft"),
+        duration.async_select_option("63"),
+        start.async_press(),
+    ):
+        with pytest.raises(HomeAssistantError):
+            await operation
+    coordinator.api.start.assert_not_called()
+    coordinator.api.set_setting.assert_not_called()
+    coordinator.async_set_update_error(DeviceException("Offline"))
+    assert not menu.available and not taste.available and not duration.available
+    coordinator.async_set_updated_data(
+        replace(snapshot, status=replace(snapshot.status, status="idle"))
+    )
+    assert (
+        menu.current_option is None and not taste.available and not duration.available
+    )
+    await menu.async_select_option("jingzhu")
+    assert start.available and duration.current_option == "60"
+
+
+@pytest.mark.parametrize("cmc", [False, True])
+async def test_entities_have_icons_or_device_classes(hass, make_coordinator, cmc):
+    platforms = await setup_platforms(hass, make_coordinator(cmc))
+    for entities in platforms.values():
+        for entity in entities:
+            assert entity.icon or getattr(entity, "device_class", None), (
+                entity.unique_id
+            )
 
 
 async def setup_platforms(hass, coordinator):
@@ -32,7 +95,7 @@ async def setup_platforms(hass, coordinator):
 async def test_legacy_entities_unchanged(hass, make_coordinator):
     coordinator = make_coordinator(False)
     entities = await setup_platforms(hass, coordinator)
-    assert len(entities["sensor"]) == 15
+    assert len(entities["sensor"]) == 11
     assert len(entities["select"]) == 3
     assert len(entities["button"]) == 2
     assert entities["number"] == entities["binary_sensor"] == []
@@ -50,15 +113,15 @@ async def test_cmc_menu_units_options_and_independent_draft(hass, make_coordinat
     coordinator = make_coordinator()
     entities = await setup_platforms(hass, coordinator)
     sensors = {entity.entity_description.key: entity for entity in entities["sensor"]}
-    assert sensors["menu"].native_value == "kuaizhu"
+    assert "menu" not in sensors and "duration" not in sensors
     assert sensors["remaining"].native_value == 61 / 60
     assert "lid_open_warning" not in sensors
     assert "rice_id" not in sensors
     assert sensors["recorded_temperature"].native_value == 27
-    assert sensors["texture"].native_value == "middle"
+    assert "texture" not in sensors
     await coordinator.async_select_cooking_menu("jingzhu")
     coordinator.set_recipe_option("taste", 2)
-    assert sensors["texture"].native_value == "middle"
+    assert "texture" not in sensors
     assert coordinator.recipe_options.taste == 2
     await coordinator.async_select_cooking_menu("zhuzhou")
     assert not coordinator.supports_option("taste")

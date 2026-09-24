@@ -65,6 +65,20 @@ class RecipeParameterEntity(XiaomiMiioCookerEntity):
     def __init__(self, coordinator, key: str) -> None:
         super().__init__(coordinator, key, None, key)
         self.key = key
+        self._attr_icon = {
+            "next_taste": "mdi:rice",
+            "next_duration": "mdi:timer-outline",
+            "next_finish_in": "mdi:clock-end",
+            "next_auto_keep_warm": "mdi:heat-wave",
+            "panel_auto_off": "mdi:monitor-off",
+            "display_timeout": "mdi:timer-cog-outline",
+            "completion_notification": "mdi:bell-check-outline",
+            "all_modes_lit": "mdi:led-on",
+            "buzzer": "mdi:volume-high",
+            "remote_control": "mdi:remote",
+            "boiling": "mdi:pot-steam-outline",
+            "save_panel_recipe": "mdi:content-save-outline",
+        }.get(key)
 
 
 class Cmc301Entity(RecipeParameterEntity):

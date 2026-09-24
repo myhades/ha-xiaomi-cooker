@@ -49,6 +49,8 @@ Select a **Cooking menu** first. The duration selector automatically chooses tha
 
 Press **Start cooking** to submit the selected recipe. Press **Stop cooking** to stop independently of the menu selection. After a successful start, the preparation controls reset. On CMC301, the selection also clears if the start result is uncertain; check the cooker state before retrying.
 
+While cooking, the menu, duration and taste selectors display the device's current values and cannot be changed. They return to recipe preparation when the cooker is idle. Duration values are in minutes.
+
 | Feature | CMC301 | normal3 |
 |---------|--------|---------|
 | Bundled recipes | 13 | 11 |
@@ -67,11 +69,13 @@ Duration choices use 5- or 10-minute intervals and include each recipe's bounds 
 
 On CMC301, **Scheduled completion** is the number of minutes until the meal finishes, not the delay before cooking starts. Set it to 0 for an immediate start. The selected recipe determines whether scheduling is available and the minimum completion time.
 
-Clear scheduled completion before pressing **Save selected recipe to panel**. Saving changes the cooker's custom recipe without starting it.
+Clear scheduled completion before pressing **Save custom recipe**. Saving changes the cooker's custom recipe without starting it.
 
 ### Feedback and Device Settings
 
 Feedback includes the current menu, working status, remaining time and duration. CMC301 also exposes fault codes, remote-control permission, boiling feedback, buzzer and display settings. Other entities depend on the model.
+
+**Panel mode lights** controls the CMC301 panel: on lights all mode indicators with the selected mode flashing; off lights only the selected mode. Raw protocol sensors are disabled by default.
 
 Temperature comes from recorded temperature history when no direct reading is available; it is not an instantaneous heater or power measurement. Fine and quick rice show five cooking stages based on the official plugin's temperature-history method. Other recipes do not use that stage mapping.
 

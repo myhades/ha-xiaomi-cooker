@@ -218,7 +218,7 @@ async def test_normal3_additional_menu_feedback_keeps_old_enum_values(
 ):
     coordinator = make_coordinator(False)
     entities = await setup_platforms(hass, coordinator)
-    menu = next(e for e in entities["sensor"] if e.entity_description.key == "menu")
+    menu = entities["select"][0]
     for menu_id, expected in (
         (1, "jingzhu"),
         (2, "kuaizhu"),
@@ -228,10 +228,11 @@ async def test_normal3_additional_menu_feedback_keeps_old_enum_values(
     ):
         coordinator.async_set_updated_data(
             replace(
-                coordinator.data, status=replace(coordinator.data.status, menu=menu_id)
+                coordinator.data,
+                status=replace(coordinator.data.status, menu=menu_id, status="running"),
             )
         )
-        assert menu.native_value == expected
+        assert menu.current_option == expected
         assert expected in menu.options
 
 

@@ -41,7 +41,7 @@
         "name": "Stop cooking"
       },
       "save_panel_recipe": {
-        "name": "Save selected recipe to panel"
+        "name": "Save custom recipe"
       }
     },
     "select": {
@@ -62,11 +62,12 @@
           "oden": "Oden",
           "soup": "Soup",
           "noodles": "Instant noodles",
-          "baby_congee": "Baby congee"
+          "baby_congee": "Baby congee",
+          "other": "Other"
         }
       },
       "next_taste": {
-        "name": "Next cooking taste",
+        "name": "Taste",
         "state": {
           "soft": "Soft",
           "middle": "Middle",
@@ -74,7 +75,7 @@
         }
       },
       "next_duration": {
-        "name": "Next cooking duration (minutes)"
+        "name": "Duration"
       }
     },
     "sensor": {
@@ -211,10 +212,10 @@
         "name": "Recorded temperature samples"
       },
       "recorded_temperature": {
-        "name": "Last recorded temperature"
+        "name": "Temperature"
       },
       "texture": {
-        "name": "Reported taste",
+        "name": "Taste",
         "state": {
           "soft": "Soft",
           "middle": "Middle",
@@ -232,7 +233,7 @@
     },
     "number": {
       "next_finish_in": {
-        "name": "Next cook finishes in"
+        "name": "Scheduled completion"
       },
       "display_timeout": {
         "name": "Display auto-off delay"
@@ -240,7 +241,7 @@
     },
     "switch": {
       "next_auto_keep_warm": {
-        "name": "Next cook auto keep warm"
+        "name": "Automatic keep warm"
       },
       "panel_auto_off": {
         "name": "Panel auto off"
@@ -249,7 +250,7 @@
         "name": "Completion notification"
       },
       "all_modes_lit": {
-        "name": "Show all cooking modes"
+        "name": "Panel mode lights"
       },
       "buzzer": {
         "name": "Buzzer"
@@ -257,7 +258,7 @@
     },
     "binary_sensor": {
       "remote_control": {
-        "name": "Remote cooking permitted"
+        "name": "Remote Control"
       },
       "boiling": {
         "name": "Water boiling"

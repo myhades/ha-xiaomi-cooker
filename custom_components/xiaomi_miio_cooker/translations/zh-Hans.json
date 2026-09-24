@@ -41,7 +41,7 @@
         "name": "停止烹饪"
       },
       "save_panel_recipe": {
-        "name": "将所选食谱设为面板自选"
+        "name": "保存自选食谱"
       }
     },
     "select": {
@@ -62,11 +62,12 @@
           "oden": "关东煮",
           "soup": "煲汤",
           "noodles": "泡面",
-          "baby_congee": "婴儿粥"
+          "baby_congee": "婴儿粥",
+          "other": "其他"
         }
       },
       "next_taste": {
-        "name": "下次烹饪口感",
+        "name": "口感",
         "state": {
           "soft": "偏软",
           "middle": "适中",
@@ -74,7 +75,7 @@
         }
       },
       "next_duration": {
-        "name": "下次烹饪时长（分钟）"
+        "name": "时长"
       }
     },
     "sensor": {
@@ -211,10 +212,10 @@
         "name": "温度历史样本数"
       },
       "recorded_temperature": {
-        "name": "最近记录温度"
+        "name": "温度"
       },
       "texture": {
-        "name": "设备口感反馈",
+        "name": "口感",
         "state": {
           "soft": "偏软",
           "middle": "适中",
@@ -232,7 +233,7 @@
     },
     "number": {
       "next_finish_in": {
-        "name": "下次预约完成倒计时"
+        "name": "预约完成"
       },
       "display_timeout": {
         "name": "屏幕自动熄灭延时"
@@ -240,7 +241,7 @@
     },
     "switch": {
       "next_auto_keep_warm": {
-        "name": "下次煮后自动保温"
+        "name": "自动保温"
       },
       "panel_auto_off": {
         "name": "面板自动熄灭"
@@ -249,7 +250,7 @@
         "name": "完成推送"
       },
       "all_modes_lit": {
-        "name": "显示全部烹饪模式"
+        "name": "模式指示灯"
       },
       "buzzer": {
         "name": "响铃"
@@ -257,7 +258,7 @@
     },
     "binary_sensor": {
       "remote_control": {
-        "name": "允许远程烹饪"
+        "name": "远程控制"
       },
       "boiling": {
         "name": "水已沸腾"

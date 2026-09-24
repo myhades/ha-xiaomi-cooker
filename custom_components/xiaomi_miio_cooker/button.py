@@ -72,6 +72,16 @@ class XiaomiCookerButton(XiaomiMiioCookerEntity, ButtonEntity):
         )
         self._attr_icon = description.icon
 
+    @property
+    def available(self):
+        if self.entity_description.key == "start_cooking":
+            return (
+                super().available
+                and not self.coordinator.cooking_active
+                and self.coordinator.selected_recipe is not None
+            )
+        return super().available
+
     async def async_press(self) -> None:
         """Handle button presses."""
         if self.entity_description.key == "start_cooking":
@@ -84,7 +94,11 @@ class XiaomiCookerButton(XiaomiMiioCookerEntity, ButtonEntity):
 class Cmc301PanelButton(Cmc301Entity, ButtonEntity):
     @property
     def available(self):
-        return super().available and self.coordinator.selected_recipe is not None
+        return (
+            super().available
+            and not self.coordinator.cooking_active
+            and self.coordinator.selected_recipe is not None
+        )
 
     async def async_press(self):
         await self.coordinator.async_set_panel_recipe()
