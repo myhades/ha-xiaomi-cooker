@@ -143,3 +143,12 @@ def test_custom_recipe_is_saved_and_read_independently(device_backend):
     assert not any(call[0] == "set_start" for call in transport.calls)
     with pytest.raises(ValueError):
         panel_profile(get_profiles_for_model(MODEL_NORMAL3)[0].profile)
+
+
+@pytest.mark.parametrize("setting,expected", [("1407", True), ("1007", False)])
+def test_keep_warm_feedback_uses_current_flag_not_menu_flags(
+    device_backend, setting, expected
+):
+    backend, transport = device_backend
+    transport.values[7] = setting
+    assert backend.fetch_data().properties["auto_keep_warm"] is expected

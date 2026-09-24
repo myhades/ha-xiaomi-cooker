@@ -161,15 +161,17 @@ async def test_cmc_stage_entities_are_localized_and_cleared(
     coordinator = make_coordinator()
     entities = await setup_platforms(hass, coordinator)
     sensors = {e.entity_description.key: e for e in entities["sensor"]}
-    name, description = sensors["stage_name"], sensors["stage_description"]
+    name = sensors["stage_name"]
+    assert "stage_description" not in sensors
     assert name.unique_id.endswith("_stage_name")
-    assert name.native_value is None and description.native_value is None
+    assert name.native_value is None
     backend = Cmc301Backend(device, metadata)
     device.values.update({(2, 1): 2, (2, 28): "00021aaa30"})
     coordinator.async_set_updated_data(backend.fetch_data())
-    assert name.native_value == description.native_value == "water_absorption"
+    assert name.native_value == "water_absorption"
     assert name.options == list(RICE_PHASES)
     assert name.extra_state_attributes == {
+        "description": "water_absorption",
         "source": "temperature_history",
         "stage_code": 1,
         "history_based": True,
@@ -181,11 +183,20 @@ async def test_cmc_stage_entities_are_localized_and_cleared(
         ]
         for key in RICE_PHASES:
             assert strings["stage_name"]["state"][key]
-            assert strings["stage_description"]["state"][key]
-            assert len(strings["stage_description"]["state"][key]) < 255
+            assert strings["stage_name"]["state_attributes"]["description"]["state"][
+                key
+            ]
+            assert (
+                len(
+                    strings["stage_name"]["state_attributes"]["description"]["state"][
+                        key
+                    ]
+                )
+                < 255
+            )
     device.values[(2, 1)] = 4
     coordinator.async_set_updated_data(backend.fetch_data())
-    assert name.native_value is None and description.native_value is None
+    assert name.native_value is None
     assert name.extra_state_attributes["stage_code"] is None
 
 
@@ -203,8 +214,9 @@ async def test_normal3_stage_entities_use_official_history_with_raw_diagnostics(
     coordinator.async_set_updated_data(backend.fetch_data())
     # Raw code 2 used to force "Boiling" even when the official curve says absorption.
     assert sensors["stage_name"].native_value == "water_absorption"
-    assert sensors["stage_description"].native_value == "water_absorption"
+    assert "stage_description" not in sensors
     assert sensors["stage_name"].extra_state_attributes == {
+        "description": "water_absorption",
         "source": "temperature_history",
         "stage_code": 2,
         "raw_stage": "02000142ff",

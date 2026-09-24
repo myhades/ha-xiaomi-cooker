@@ -45,19 +45,19 @@
       "cooking_menu": {
         "name": "烹饪菜单",
         "state": {
-          "jingzhu": "精煮",
-          "kuaizhu": "快煮",
+          "jingzhu": "精煮饭",
+          "kuaizhu": "快煮饭",
           "zhuzhou": "煮粥",
           "baowen": "保温",
           "cake": "蛋糕",
           "yoghurt": "酸奶",
-          "refan": "热饭",
-          "cooking": "烹饪",
-          "sweet_rice": "米饭 香甜煮",
+          "refan": "再加热",
+          "cooking": "蒸煮",
+          "sweet_rice": "香甜饭",
           "quick_rice": "快速煮饭",
           "brown_rice": "糙米饭",
           "oden": "关东煮",
-          "soup": "煲汤",
+          "soup": "炖汤",
           "noodles": "泡面",
           "baby_congee": "婴儿粥",
           "other": "其他"
@@ -93,19 +93,19 @@
       "panel_recipe": {
         "name": "自选食谱",
         "state": {
-          "jingzhu": "精煮",
-          "kuaizhu": "快煮",
+          "jingzhu": "精煮饭",
+          "kuaizhu": "快煮饭",
           "zhuzhou": "煮粥",
           "baowen": "保温",
           "cake": "蛋糕",
           "yoghurt": "酸奶",
-          "refan": "热饭",
-          "cooking": "烹饪",
-          "sweet_rice": "米饭 香甜煮",
+          "refan": "再加热",
+          "cooking": "蒸煮",
+          "sweet_rice": "香甜饭",
           "quick_rice": "快速煮饭",
           "brown_rice": "糙米饭",
           "oden": "关东煮",
-          "soup": "煲汤",
+          "soup": "炖汤",
           "noodles": "泡面",
           "baby_congee": "婴儿粥",
           "other": "其他"
@@ -151,21 +151,21 @@
       "menu": {
         "name": "菜单",
         "state": {
-          "jingzhu": "精煮",
-          "kuaizhu": "快煮",
+          "jingzhu": "精煮饭",
+          "kuaizhu": "快煮饭",
           "zhuzhou": "煮粥",
           "baowen": "保温",
           "cake": "蛋糕",
           "yoghurt": "酸奶",
-          "refan": "热饭",
+          "refan": "再加热",
           "cooking": "蒸煮",
           "other": "其他",
           "brown_rice": "糙米饭",
           "oden": "关东煮",
-          "soup": "煲汤",
+          "soup": "炖汤",
           "noodles": "泡面",
           "baby_congee": "婴儿粥",
-          "sweet_rice": "米饭 香甜煮"
+          "sweet_rice": "香甜饭"
         }
       },
       "temperature": {
@@ -180,13 +180,13 @@
       "favorite": {
         "name": "自选食谱",
         "state": {
-          "jingzhu": "精煮",
-          "kuaizhu": "快煮",
+          "jingzhu": "精煮饭",
+          "kuaizhu": "快煮饭",
           "zhuzhou": "煮粥",
           "baowen": "保温",
           "cake": "蛋糕",
           "yoghurt": "酸奶",
-          "refan": "热饭",
+          "refan": "再加热",
           "cooking": "蒸煮",
           "other": "其他"
         }
@@ -206,7 +206,7 @@
         }
       },
       "lid_open_timeout": {
-        "name": "自动保温开盖超时"
+        "name": "开盖保温超时"
       },
       "rice_id": {
         "name": "米种"
@@ -218,23 +218,25 @@
         "name": "口感阶段"
       },
       "stage_name": {
-        "name": "阶段名称",
+        "name": "烹饪阶段",
         "state": {
           "quick_preheat": "快速预热",
           "water_absorption": "中温吸水",
           "boiling": "大火煮沸",
           "gelatinization": "高温糊化",
           "simmering": "焖饭补炊"
-        }
-      },
-      "stage_description": {
-        "name": "阶段说明",
-        "state": {
-          "quick_preheat": "逐步升温，软化米粒。",
-          "water_absorption": "持续升温，让米粒充分吸水。",
-          "boiling": "持续加热至煮沸，使米饭均匀受热。",
-          "gelatinization": "利用高温蒸汽促进米粒糊化。",
-          "simmering": "保持均匀温度，使米饭进一步糊化。"
+        },
+        "state_attributes": {
+          "description": {
+            "name": "说明",
+            "state": {
+              "quick_preheat": "逐步升温，软化米粒。",
+              "water_absorption": "持续升温，让米粒充分吸水。",
+              "boiling": "持续加热至煮沸，使米饭均匀受热。",
+              "gelatinization": "利用高温蒸汽促进米粒糊化。",
+              "simmering": "保持均匀温度，使米饭进一步糊化。"
+            }
+          }
         }
       },
       "fault": {
@@ -282,7 +284,16 @@
     },
     "switch": {
       "next_auto_keep_warm": {
-        "name": "自动保温"
+        "name": "自动保温",
+        "state_attributes": {
+          "read_only": {
+            "name": "只读",
+            "state": {
+              "true": "是",
+              "false": "否"
+            }
+          }
+        }
       },
       "completion_notification": {
         "name": "完成推送"
@@ -332,16 +343,20 @@
           "name": "菜单键"
         },
         "duration": {
-          "name": "烹饪时长（分钟）"
+          "name": "烹饪时长（分钟）",
+          "description": "食谱范围内的整数分钟；留空使用默认值。"
         },
         "finish_in": {
-          "name": "距完成时间（分钟）"
+          "name": "距完成时间（分钟）",
+          "description": "距离完成的分钟数；0 表示立即开始。"
         },
         "taste": {
-          "name": "口感"
+          "name": "口感",
+          "description": "仅精煮饭支持。"
         },
         "auto_keep_warm": {
-          "name": "煮后自动保温"
+          "name": "煮后自动保温",
+          "description": "烹饪结束后自动保温，仅适用于支持的食谱。"
         }
       }
     }
@@ -381,7 +396,7 @@
       "message": "请选择支持的口感：偏软、适中或偏硬。"
     },
     "invalid_duration_option": {
-      "message": "请从可用选项中选择烹饪时长。"
+      "message": "请从可用选项中选择时长。"
     },
     "invalid_recipe": {
       "message": "食谱格式或校验码无效，请使用可信的食谱模板。"
@@ -414,7 +429,7 @@
       "message": "电饭煲当前不允许远程开始烹饪。"
     },
     "cooker_busy": {
-      "message": "开始前，电饭煲须处于待机状态且无故障。"
+      "message": "执行此操作前，电饭煲须处于待机状态且无故障。"
     },
     "start_unconfirmed": {
       "message": "未能确认启动结果，请先检查电饭煲状态，再决定是否重试。"

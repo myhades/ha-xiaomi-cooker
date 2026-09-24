@@ -8,6 +8,7 @@ from homeassistant.core import HomeAssistant
 from .coordinator import XiaomiCookerConfigEntry
 
 SAFE_PROPERTIES = {
+    "auto_keep_warm",
     "status_code",
     "fault",
     "mode_code",

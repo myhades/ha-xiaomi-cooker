@@ -208,6 +208,10 @@ class LegacyCookerBackend:
             )
             properties.update(
                 {
+                    "auto_keep_warm": bool(int(raw_data["setting"][:2], 16) & 4)
+                    if isinstance(raw_data.get("setting"), str)
+                    and re.fullmatch(r"[0-9a-fA-F]{4}", raw_data["setting"])
+                    else None,
                     "panel_recipe_id": status.favorite,
                     "panel_auto_off": not settings.led_on
                     if settings and settings.led_on is not None

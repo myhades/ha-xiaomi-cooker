@@ -45,15 +45,15 @@
       "cooking_menu": {
         "name": "Cooking menu",
         "state": {
-          "jingzhu": "Jingzhu",
-          "kuaizhu": "Kuaizhu",
-          "zhuzhou": "Zhuzhou",
-          "baowen": "Baowen",
+          "jingzhu": "Fine rice",
+          "kuaizhu": "Quick rice",
+          "zhuzhou": "Congee",
+          "baowen": "Keep warm",
           "cake": "Cake",
           "yoghurt": "Yoghurt",
-          "refan": "Refan",
-          "cooking": "Cooking",
-          "sweet_rice": "Sweet rice",
+          "refan": "Reheat",
+          "cooking": "Steam",
+          "sweet_rice": "Fragrant rice",
           "quick_rice": "Quick rice",
           "brown_rice": "Brown rice",
           "oden": "Oden",
@@ -67,7 +67,7 @@
         "name": "Taste",
         "state": {
           "soft": "Soft",
-          "middle": "Middle",
+          "middle": "Medium",
           "hard": "Hard",
           "default": "Default"
         }
@@ -93,15 +93,15 @@
       "panel_recipe": {
         "name": "Custom recipe",
         "state": {
-          "jingzhu": "Jingzhu",
-          "kuaizhu": "Kuaizhu",
-          "zhuzhou": "Zhuzhou",
-          "baowen": "Baowen",
+          "jingzhu": "Fine rice",
+          "kuaizhu": "Quick rice",
+          "zhuzhou": "Congee",
+          "baowen": "Keep warm",
           "cake": "Cake",
           "yoghurt": "Yoghurt",
-          "refan": "Refan",
-          "cooking": "Cooking",
-          "sweet_rice": "Sweet rice",
+          "refan": "Reheat",
+          "cooking": "Steam",
+          "sweet_rice": "Fragrant rice",
           "quick_rice": "Quick rice",
           "brown_rice": "Brown rice",
           "oden": "Oden",
@@ -112,7 +112,7 @@
         }
       },
       "lid_open_timeout": {
-        "name": "Keep-warm timeout",
+        "name": "Lid-open keep-warm timeout",
         "state": {
           "2": "2 minutes",
           "4": "4 minutes",
@@ -139,9 +139,9 @@
         "state": {
           "unknown": "Unknown",
           "idle": "Idle",
-          "running": "Running",
+          "running": "Cooking",
           "keep_warm": "Keep warm",
-          "busy": "Busy",
+          "busy": "Scheduled",
           "scheduled": "Scheduled cooking",
           "error": "Error",
           "updating": "Updating",
@@ -151,28 +151,28 @@
       "menu": {
         "name": "Menu",
         "state": {
-          "jingzhu": "Jingzhu",
-          "kuaizhu": "Kuaizhu",
-          "zhuzhou": "Zhuzhou",
-          "baowen": "Baowen",
+          "jingzhu": "Fine rice",
+          "kuaizhu": "Quick rice",
+          "zhuzhou": "Congee",
+          "baowen": "Keep warm",
           "cake": "Cake",
           "yoghurt": "Yoghurt",
-          "refan": "Refan",
-          "cooking": "Cooking",
+          "refan": "Reheat",
+          "cooking": "Steam",
           "other": "Other",
           "brown_rice": "Brown rice",
           "oden": "Oden",
           "soup": "Soup",
           "noodles": "Instant noodles",
           "baby_congee": "Baby congee",
-          "sweet_rice": "Sweet rice"
+          "sweet_rice": "Fragrant rice"
         }
       },
       "temperature": {
         "name": "Temperature"
       },
       "remaining": {
-        "name": "Remaining"
+        "name": "Remaining time"
       },
       "duration": {
         "name": "Duration"
@@ -180,19 +180,19 @@
       "favorite": {
         "name": "Custom recipe",
         "state": {
-          "jingzhu": "Jingzhu",
-          "kuaizhu": "Kuaizhu",
-          "zhuzhou": "Zhuzhou",
-          "baowen": "Baowen",
+          "jingzhu": "Fine rice",
+          "kuaizhu": "Quick rice",
+          "zhuzhou": "Congee",
+          "baowen": "Keep warm",
           "cake": "Cake",
           "yoghurt": "Yoghurt",
-          "refan": "Refan",
-          "cooking": "Cooking",
+          "refan": "Reheat",
+          "cooking": "Steam",
           "other": "Other"
         }
       },
       "panel_display_auto_off": {
-        "name": "Panel display auto off",
+        "name": "Panel auto off",
         "state": {
           "off": "Off",
           "on": "On"
@@ -206,10 +206,10 @@
         }
       },
       "lid_open_timeout": {
-        "name": "Auto keep-warm lid open timeout"
+        "name": "Lid-open keep-warm timeout"
       },
       "rice_id": {
-        "name": "Rice ID"
+        "name": "Rice type"
       },
       "taste": {
         "name": "Taste"
@@ -218,23 +218,25 @@
         "name": "Taste phase"
       },
       "stage_name": {
-        "name": "Stage name",
+        "name": "Cooking stage",
         "state": {
           "quick_preheat": "Quick preheating",
           "water_absorption": "Water absorption",
           "boiling": "Boiling",
           "gelatinization": "Gelatinization",
           "simmering": "Simmering"
-        }
-      },
-      "stage_description": {
-        "name": "Stage description",
-        "state": {
-          "quick_preheat": "Gradually raising the temperature to soften the rice.",
-          "water_absorption": "Raising the temperature while the grains absorb water.",
-          "boiling": "Heating to a boil so the rice cooks evenly.",
-          "gelatinization": "Using high-temperature steam to gelatinize the grains.",
-          "simmering": "Maintaining an even temperature to finish gelatinizing the rice."
+        },
+        "state_attributes": {
+          "description": {
+            "name": "Description",
+            "state": {
+              "quick_preheat": "Gradually raising the temperature to soften the rice.",
+              "water_absorption": "Raising the temperature while the grains absorb water.",
+              "boiling": "Heating to a boil so the rice cooks evenly.",
+              "gelatinization": "Using high-temperature steam to gelatinize the grains.",
+              "simmering": "Maintaining an even temperature to finish gelatinizing the rice."
+            }
+          }
         }
       },
       "fault": {
@@ -262,7 +264,7 @@
         "name": "Taste",
         "state": {
           "soft": "Soft",
-          "middle": "Middle",
+          "middle": "Medium",
           "hard": "Hard"
         }
       },
@@ -282,7 +284,16 @@
     },
     "switch": {
       "next_auto_keep_warm": {
-        "name": "Automatic keep warm"
+        "name": "Automatic keep warm",
+        "state_attributes": {
+          "read_only": {
+            "name": "Read only",
+            "state": {
+              "true": "Yes",
+              "false": "No"
+            }
+          }
+        }
       },
       "completion_notification": {
         "name": "Completion notification"
@@ -332,16 +343,20 @@
           "name": "Recipe key"
         },
         "duration": {
-          "name": "Cooking duration (minutes)"
+          "name": "Cooking duration (minutes)",
+          "description": "Whole minutes within the recipe limits. Omit to use the default."
         },
         "finish_in": {
-          "name": "Finish in (minutes)"
+          "name": "Finish in (minutes)",
+          "description": "Minutes until completion. Zero starts immediately."
         },
         "taste": {
-          "name": "Taste"
+          "name": "Taste",
+          "description": "Fine rice only."
         },
         "auto_keep_warm": {
-          "name": "Automatic keep warm"
+          "name": "Automatic keep warm",
+          "description": "Keep warm after cooking, for recipes that support it."
         }
       }
     }
@@ -381,7 +396,7 @@
       "message": "Select a supported taste: soft, medium or hard."
     },
     "invalid_duration_option": {
-      "message": "Select one of the available cooking durations."
+      "message": "Select one of the available durations."
     },
     "invalid_recipe": {
       "message": "The recipe format or checksum is invalid. Use a trusted recipe template."
@@ -414,7 +429,7 @@
       "message": "The cooker does not currently allow remote cooking."
     },
     "cooker_busy": {
-      "message": "The cooker must be idle and free of faults before starting."
+      "message": "The cooker must be idle and free of faults for this action."
     },
     "start_unconfirmed": {
       "message": "The start result is uncertain. Check the cooker before retrying."

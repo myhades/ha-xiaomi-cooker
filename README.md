@@ -77,9 +77,11 @@ Feedback includes the current menu, working status, remaining time and duration.
 
 **Panel mode lights** controls the CMC301 panel: on lights all mode indicators with the selected mode flashing; off lights only the selected mode. Raw protocol sensors are disabled by default.
 
-**Panel auto off** offers **Off** and **2–10 minutes** on CMC301, or **Off** and **5–10 minutes** on normal3, in one-minute steps. Both models support **Completion notification**. normal3 also provides **Lid open alarm** and **Keep-warm timeout**, with timeout options of 2, 4, 6, 8 and 10 minutes. normal3 settings can be changed while idle.
+**Panel auto off** offers **Off** and **2–10 minutes** on CMC301, or **Off** and **5–10 minutes** on normal3, in one-minute steps. Both models support **Completion notification**. normal3 also provides **Lid open alarm** and **Lid-open keep-warm timeout**, with timeout options of 2, 4, 6, 8 and 10 minutes. normal3 settings can be changed while idle.
 
-Temperature comes from recorded temperature history when no direct reading is available; it is not an instantaneous heater or power measurement. Fine and quick rice show five cooking stages based on the official plugin's temperature-history method. Other recipes do not use that stage mapping.
+Temperature comes from recorded temperature history when no direct reading is available; it is not an instantaneous heater or power measurement. Fine and quick rice show five cooking stages based on the official plugin's temperature-history method. Other recipes do not use that stage mapping. The single **Cooking stage** sensor includes a translated description attribute; the former stage-description entity is removed on reload.
+
+During cooking, **Automatic keep warm** shows device feedback when available (currently normal3) and rejects changes. CMC301 has no verified readback for this option, so its switch remains unavailable during cooking. normal3 settings are unavailable until the cooker is idle.
 
 ## Actions
 

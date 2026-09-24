@@ -191,7 +191,11 @@ class PanelSleepSelect(CookerPropertyEntity, SelectEntity):
 
     @property
     def available(self):
-        return super().available and self.current_option is not None
+        return (
+            super().available
+            and self.coordinator.settings_writable
+            and self.current_option is not None
+        )
 
     async def async_select_option(self, option):
         if option not in self.options:
@@ -242,7 +246,11 @@ class LidTimeoutSelect(CookerPropertyEntity, SelectEntity):
 
     @property
     def available(self):
-        return super().available and self.current_option in self.options
+        return (
+            super().available
+            and self.coordinator.settings_writable
+            and self.current_option in self.options
+        )
 
     async def async_select_option(self, option):
         if option not in self.options:

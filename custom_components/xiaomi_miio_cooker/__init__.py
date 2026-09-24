@@ -70,7 +70,9 @@ def _remove_replaced_duration_number(hass, entry, device_unique_id, model=None):
     registry = er.async_get(hass)
     replaced = [("number", "next_duration")]
     if model in {MODEL_CMC301, MODEL_NORMAL3}:
-        replaced.extend(("sensor", key) for key in ("mode", "menu", "duration"))
+        replaced.extend(
+            ("sensor", key) for key in ("mode", "menu", "duration", "stage_description")
+        )
         replaced.extend(
             ("sensor", key)
             for key in (

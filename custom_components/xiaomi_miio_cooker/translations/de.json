@@ -1,0 +1,444 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Xiaomi Cooker einrichten",
+        "data": {
+          "host": "IP-Adresse",
+          "token": "Token",
+          "model": "Modell"
+        }
+      },
+      "reconfigure": {
+        "title": "Verbindung neu konfigurieren",
+        "description": "IP-Adresse eingeben. Token leer lassen, um den bisherigen Wert zu behalten. Die Geräteidentität wird vor dem Speichern geprüft.",
+        "data": {
+          "host": "IP-Adresse",
+          "token": "Neues Token (optional)"
+        }
+      }
+    },
+    "error": {
+      "cannot_detect_model": "Modell konnte nicht automatisch erkannt werden",
+      "cannot_connect": "Verbindung zum Gerät fehlgeschlagen",
+      "unsupported_model": "Nicht unterstütztes Modell",
+      "unknown": "Unerwarteter Fehler",
+      "invalid_token": "Das Token muss 32 Hexadezimalzeichen enthalten",
+      "cannot_verify_identity": "Die Geräteidentität konnte nicht geprüft werden. Die Verbindungseinstellungen bleiben unverändert."
+    },
+    "abort": {
+      "already_configured": "Gerät ist bereits eingerichtet",
+      "wrong_device": "Die Adresse gehört zu einem anderen Gerät. Die Verbindungseinstellungen bleiben unverändert.",
+      "reconfigure_successful": "Die Verbindungseinstellungen wurden aktualisiert."
+    }
+  },
+  "entity": {
+    "button": {
+      "start_cooking": {
+        "name": "Kochen starten"
+      },
+      "stop_cooking": {
+        "name": "Kochen beenden"
+      }
+    },
+    "select": {
+      "cooking_menu": {
+        "name": "Kochprogramm",
+        "state": {
+          "jingzhu": "Schonend gegarter Reis",
+          "kuaizhu": "Schnellreis",
+          "zhuzhou": "Reisbrei",
+          "baowen": "Warmhalten",
+          "cake": "Kuchen",
+          "yoghurt": "Joghurt",
+          "refan": "Aufwärmen",
+          "cooking": "Dampfgaren",
+          "sweet_rice": "Aromatischer Reis",
+          "quick_rice": "Schnellreis",
+          "brown_rice": "Vollkornreis",
+          "oden": "Oden",
+          "soup": "Suppe",
+          "noodles": "Instantnudeln",
+          "baby_congee": "Baby-Reisbrei",
+          "other": "Andere"
+        }
+      },
+      "next_taste": {
+        "name": "Konsistenz",
+        "state": {
+          "soft": "Weich",
+          "middle": "Mittel",
+          "hard": "Fest",
+          "default": "Standard"
+        }
+      },
+      "next_duration": {
+        "name": "Dauer"
+      },
+      "panel_auto_off": {
+        "name": "Display-Abschaltung",
+        "state": {
+          "off": "Aus",
+          "2": "2 Minuten",
+          "3": "3 Minuten",
+          "4": "4 Minuten",
+          "5": "5 Minuten",
+          "6": "6 Minuten",
+          "7": "7 Minuten",
+          "8": "8 Minuten",
+          "9": "9 Minuten",
+          "10": "10 Minuten"
+        }
+      },
+      "panel_recipe": {
+        "name": "Eigenes Rezept",
+        "state": {
+          "jingzhu": "Schonend gegarter Reis",
+          "kuaizhu": "Schnellreis",
+          "zhuzhou": "Reisbrei",
+          "baowen": "Warmhalten",
+          "cake": "Kuchen",
+          "yoghurt": "Joghurt",
+          "refan": "Aufwärmen",
+          "cooking": "Dampfgaren",
+          "sweet_rice": "Aromatischer Reis",
+          "quick_rice": "Schnellreis",
+          "brown_rice": "Vollkornreis",
+          "oden": "Oden",
+          "soup": "Suppe",
+          "noodles": "Instantnudeln",
+          "baby_congee": "Baby-Reisbrei",
+          "other": "Andere"
+        }
+      },
+      "lid_open_timeout": {
+        "name": "Warmhaltezeit bei offenem Deckel",
+        "state": {
+          "2": "2 Minuten",
+          "4": "4 Minuten",
+          "6": "6 Minuten",
+          "8": "8 Minuten",
+          "10": "10 Minuten"
+        }
+      }
+    },
+    "sensor": {
+      "mode": {
+        "name": "Modus",
+        "state": {
+          "unknown": "Unbekannt",
+          "fine_cook": "Schonendes Garen",
+          "quick_cook": "Schnellgaren",
+          "cook_congee": "Reisbrei kochen",
+          "keep_warm": "Warmhalten",
+          "custom": "Eigenes Rezept"
+        }
+      },
+      "status": {
+        "name": "Status",
+        "state": {
+          "unknown": "Unbekannt",
+          "idle": "Bereit",
+          "running": "Kochen",
+          "keep_warm": "Warmhalten",
+          "busy": "Geplant",
+          "scheduled": "Geplantes Kochen",
+          "error": "Fehler",
+          "updating": "Aktualisierung läuft",
+          "completed": "Fertig"
+        }
+      },
+      "menu": {
+        "name": "Kochprogramm",
+        "state": {
+          "jingzhu": "Schonend gegarter Reis",
+          "kuaizhu": "Schnellreis",
+          "zhuzhou": "Reisbrei",
+          "baowen": "Warmhalten",
+          "cake": "Kuchen",
+          "yoghurt": "Joghurt",
+          "refan": "Aufwärmen",
+          "cooking": "Dampfgaren",
+          "other": "Andere",
+          "brown_rice": "Vollkornreis",
+          "oden": "Oden",
+          "soup": "Suppe",
+          "noodles": "Instantnudeln",
+          "baby_congee": "Baby-Reisbrei",
+          "sweet_rice": "Aromatischer Reis"
+        }
+      },
+      "temperature": {
+        "name": "Temperatur"
+      },
+      "remaining": {
+        "name": "Restzeit"
+      },
+      "duration": {
+        "name": "Dauer"
+      },
+      "favorite": {
+        "name": "Eigenes Rezept",
+        "state": {
+          "jingzhu": "Schonend gegarter Reis",
+          "kuaizhu": "Schnellreis",
+          "zhuzhou": "Reisbrei",
+          "baowen": "Warmhalten",
+          "cake": "Kuchen",
+          "yoghurt": "Joghurt",
+          "refan": "Aufwärmen",
+          "cooking": "Dampfgaren",
+          "other": "Andere"
+        }
+      },
+      "panel_display_auto_off": {
+        "name": "Display-Abschaltung",
+        "state": {
+          "off": "Aus",
+          "on": "Ein"
+        }
+      },
+      "lid_open_warning": {
+        "name": "Deckelalarm",
+        "state": {
+          "off": "Aus",
+          "on": "Ein"
+        }
+      },
+      "lid_open_timeout": {
+        "name": "Warmhaltezeit bei offenem Deckel"
+      },
+      "rice_id": {
+        "name": "Reissorte"
+      },
+      "taste": {
+        "name": "Konsistenz"
+      },
+      "taste_phase": {
+        "name": "Konsistenzstufe"
+      },
+      "stage_name": {
+        "name": "Kochphase",
+        "state": {
+          "quick_preheat": "Schnelles Vorheizen",
+          "water_absorption": "Wasseraufnahme",
+          "boiling": "Aufkochen",
+          "gelatinization": "Verkleisterung",
+          "simmering": "Nachgaren"
+        },
+        "state_attributes": {
+          "description": {
+            "name": "Beschreibung",
+            "state": {
+              "quick_preheat": "Die Temperatur steigt allmählich und macht die Reiskörner weich.",
+              "water_absorption": "Die Reiskörner nehmen beim Erwärmen Wasser auf.",
+              "boiling": "Das Wasser kocht auf, damit der Reis gleichmäßig gart.",
+              "gelatinization": "Heißer Dampf lässt die Stärke in den Reiskörnern verkleistern.",
+              "simmering": "Gleichmäßige Wärme lässt den Reis fertig garen."
+            }
+          }
+        }
+      },
+      "fault": {
+        "name": "Fehlercode"
+      },
+      "recipe_id": {
+        "name": "Rezept-ID"
+      },
+      "status_code": {
+        "name": "Statuscode"
+      },
+      "mode_code": {
+        "name": "Moduscode"
+      },
+      "reset_flag": {
+        "name": "Reset-Synchronisierung"
+      },
+      "history_samples": {
+        "name": "Temperaturmesswerte"
+      },
+      "recorded_temperature": {
+        "name": "Temperatur"
+      },
+      "texture": {
+        "name": "Konsistenz",
+        "state": {
+          "soft": "Weich",
+          "middle": "Mittel",
+          "hard": "Fest"
+        }
+      },
+      "recipe_type": {
+        "name": "Rezepttyp",
+        "state": {
+          "official": "Offiziell",
+          "cloud": "Cloud",
+          "custom": "Benutzerdefiniert"
+        }
+      }
+    },
+    "number": {
+      "next_finish_in": {
+        "name": "Zeit bis Fertigstellung"
+      }
+    },
+    "switch": {
+      "next_auto_keep_warm": {
+        "name": "Automatisches Warmhalten",
+        "state_attributes": {
+          "read_only": {
+            "name": "Schreibgeschützt",
+            "state": {
+              "true": "Ja",
+              "false": "Nein"
+            }
+          }
+        }
+      },
+      "completion_notification": {
+        "name": "Fertigmeldung"
+      },
+      "all_modes_lit": {
+        "name": "Programmanzeigen"
+      },
+      "buzzer": {
+        "name": "Signalton"
+      },
+      "lid_open_warning": {
+        "name": "Deckelalarm"
+      }
+    },
+    "binary_sensor": {
+      "remote_control": {
+        "name": "Fernsteuerung"
+      },
+      "boiling": {
+        "name": "Wasser kocht"
+      }
+    }
+  },
+  "services": {
+    "start": {
+      "name": "Kochen starten",
+      "description": "Kochen mit einem Profil starten.",
+      "fields": {
+        "device_id": {
+          "name": "Gerät",
+          "description": "Zielgerät für den Kochvorgang."
+        },
+        "profile": {
+          "name": "Profil",
+          "description": "Profildaten mit der Temperaturkurve."
+        }
+      }
+    },
+    "start_recipe": {
+      "name": "Rezept starten",
+      "description": "Ein integriertes Rezept mit Einstellungen starten. Die Zeitplanung ist nur für CMC301 verfügbar.",
+      "fields": {
+        "device_id": {
+          "name": "Gerät"
+        },
+        "recipe": {
+          "name": "Rezeptschlüssel"
+        },
+        "duration": {
+          "name": "Kochdauer (Minuten)",
+          "description": "Ganze Minuten innerhalb der Rezeptgrenzen. Ohne Angabe gilt der Standardwert."
+        },
+        "finish_in": {
+          "name": "Fertig in (Minuten)",
+          "description": "Minuten bis zur Fertigstellung. 0 startet sofort."
+        },
+        "taste": {
+          "name": "Konsistenz",
+          "description": "Nur für schonend gegarten Reis."
+        },
+        "auto_keep_warm": {
+          "name": "Automatisches Warmhalten",
+          "description": "Nach dem Kochen warmhalten, sofern das Rezept dies unterstützt."
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "no_loaded_device": {
+      "message": "Kein Reiskocher geladen. Verbindung der Integration prüfen."
+    },
+    "multiple_devices": {
+      "message": "Mehrere passende Reiskocher gefunden. Ein Gerät auswählen."
+    },
+    "device_not_found": {
+      "message": "Das ausgewählte Gerät wurde nicht gefunden."
+    },
+    "device_not_loaded": {
+      "message": "Die Integration für das ausgewählte Gerät ist nicht geladen."
+    },
+    "invalid_parameters": {
+      "message": "Ungültige Kocheinstellungen. Rezept und verfügbare Optionen prüfen."
+    },
+    "unsupported_option": {
+      "message": "Diese Option ist für das Rezept nicht verfügbar."
+    },
+    "select_recipe": {
+      "message": "Zuerst ein Rezept auswählen."
+    },
+    "clear_schedule": {
+      "message": "Vor dem Speichern des eigenen Rezepts die Zeitplanung löschen."
+    },
+    "unsupported_recipe": {
+      "message": "Dieses Rezept wird vom Reiskocher nicht unterstützt."
+    },
+    "whole_minutes": {
+      "message": "Eine ganze Anzahl Minuten eingeben."
+    },
+    "invalid_taste": {
+      "message": "Eine Konsistenz auswählen: weich, mittel oder fest."
+    },
+    "invalid_duration_option": {
+      "message": "Eine der verfügbaren Zeitspannen auswählen."
+    },
+    "invalid_recipe": {
+      "message": "Ungültiges Rezeptformat oder ungültige Prüfsumme. Eine vertrauenswürdige Vorlage verwenden."
+    },
+    "invalid_keep_warm": {
+      "message": "Automatisches Warmhalten muss ein- oder ausgeschaltet sein."
+    },
+    "keep_warm_unsupported": {
+      "message": "Automatisches Warmhalten lässt sich bei diesem Rezept nicht ändern."
+    },
+    "taste_unsupported": {
+      "message": "Die Konsistenz lässt sich nur bei schonend gegartem Reis einstellen."
+    },
+    "invalid_finish_in": {
+      "message": "Die Zeit bis zur Fertigstellung muss 0–1439 Minuten betragen. 0 startet sofort."
+    },
+    "schedule_unsupported": {
+      "message": "Diese Zeitplanung wird vom Rezept oder Gerät nicht unterstützt."
+    },
+    "untrusted_recipe": {
+      "message": "CMC301 akzeptiert nur integrierte Rezepte mit unterstützten Einstellungen."
+    },
+    "duration_out_of_range": {
+      "message": "Die Kochdauer muss zwischen {minimum} und {maximum} Minuten liegen."
+    },
+    "finish_too_soon": {
+      "message": "Die Zeit bis zur Fertigstellung muss über {minimum} Minuten liegen. 0 startet sofort."
+    },
+    "remote_denied": {
+      "message": "Der Reiskocher erlaubt derzeit keinen Fernstart."
+    },
+    "cooker_busy": {
+      "message": "Für diese Aktion muss der Reiskocher bereit und störungsfrei sein."
+    },
+    "start_unconfirmed": {
+      "message": "Der Start wurde nicht bestätigt. Vor einem erneuten Versuch das Gerät prüfen."
+    },
+    "write_unconfirmed": {
+      "message": "Die Änderung wurde nicht bestätigt. Vor einem erneuten Versuch den Status aktualisieren."
+    },
+    "command_failed": {
+      "message": "Der Befehl ist fehlgeschlagen oder wurde nicht bestätigt. Vor einem erneuten Versuch das Gerät prüfen."
+    }
+  }
+}

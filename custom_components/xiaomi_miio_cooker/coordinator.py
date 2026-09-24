@@ -143,7 +143,15 @@ class XiaomiMiioCookerCoordinator(DataUpdateCoordinator[CookerData]):
         self.recipe_options = candidate
         self.async_update_listeners()
 
+    @property
+    def settings_writable(self) -> bool:
+        return self.is_cmc301 or (
+            self.data is not None and self.data.status.status == "idle"
+        )
+
     async def async_set_setting(self, key: str, value) -> None:
+        if not self.settings_writable:
+            raise validation_error("cooker_busy")
         await self._async_execute_command(self.api.set_setting, key, value)
 
     async def async_select_panel_recipe(self, recipe: str) -> None:

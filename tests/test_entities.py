@@ -93,7 +93,7 @@ async def setup_platforms(hass, coordinator):
 async def test_legacy_entities_unchanged(hass, make_coordinator):
     coordinator = make_coordinator(False)
     entities = await setup_platforms(hass, coordinator)
-    assert len(entities["sensor"]) == 6
+    assert len(entities["sensor"]) == 5
     assert len(entities["select"]) == 6
     assert len(entities["button"]) == 2
     assert entities["number"] == entities["binary_sensor"] == []

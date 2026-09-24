@@ -208,6 +208,7 @@ async def async_setup_entry(
                 "duration",
                 "taste",
                 "taste_phase",
+                "stage_description",
                 "favorite",
                 "panel_display_auto_off",
                 "lid_open_warning",
@@ -296,6 +297,7 @@ class XiaomiCookerSensor(XiaomiMiioCookerEntity, SensorEntity):
             return None
         stage = data.status.stage if data.status is not None else None
         attributes = {
+            "description": stage.phase if stage is not None else None,
             "source": data.properties.get("stage_source"),
             "stage_code": stage.state if stage is not None else None,
         }
@@ -411,7 +413,6 @@ def cmc301_descriptions():
             "status",
             "remaining",
             "stage_name",
-            "stage_description",
         }:
             continue
         if description.key in {"stage_name", "stage_description"}:
