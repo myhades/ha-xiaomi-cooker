@@ -9,10 +9,10 @@ Xiaomi Electric Rice Cooker integrates Xiaomi and Chunmi rice cookers into Home 
 
 ## Supported Devices
 
-| Name | Model | Model no. |
-|------|-------|-----------|
-| Mi Smart Small Rice Cooker 2 | xiaomi.cooker.cmc301 | CMC301 |
-| Mi Rice Cooker | chunmi.cooker.normal3 | |
+| Name | Model |
+|------|-------|
+| Mi Smart Small Rice Cooker 2 | xiaomi.cooker.cmc301 |
+| Mi Rice Cooker | chunmi.cooker.normal3 |
 
 ## Installation
 
@@ -22,12 +22,12 @@ Choose your preferred installation method, and reboot Home Assistant afterward.
 
 ### Method 1: Through HACS
 
-This repository is not in the default list yet. To add it, use the My button below, or navigate to **HACS > Overflow menu > Custom repositories** and enter:
+This repository is not in the default list yet. To add it, use the My button below, or navigate to `HACS > Overflow menu > Custom repositories` and enter:
 
-- **Repository:** `https://github.com/myhades/xiaomi_cooker`
-- **Type:** Integration
+- `Repository`: `https://github.com/myhades/xiaomi_cooker`
+- `Type`: Integration
 
-Then, navigate to **HACS > Xiaomi Electric Rice Cooker** and install the integration.
+Then, navigate to `HACS > Xiaomi Electric Rice Cooker` and install the integration.
 
 [![Open your Home Assistant instance and open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=myhades&repository=xiaomi_cooker&category=integration)
 
@@ -37,7 +37,7 @@ Download the repository and copy the `/custom_components/xiaomi_miio_cooker` fol
 
 ## Configuration
 
-To add the integration, navigate to **Settings > Devices & services > Add integration > Xiaomi Electric Rice Cooker**, or use the My button below. Then follow the configuration flow.
+To add the integration, navigate to `Settings > Devices & services > Add integration > Xiaomi Electric Rice Cooker`, or use the My button below. Then follow the configuration flow.
 
 [![Add Xiaomi Electric Rice Cooker to Home Assistant.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=xiaomi_miio_cooker)
 
