@@ -1,9 +1,7 @@
 """Identity-preserving reconfiguration and private, offline diagnostics."""
 
 import json
-import string
 from dataclasses import replace
-from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 
@@ -184,20 +182,3 @@ async def test_recipe_error_has_translated_range(make_coordinator):
         coordinator.prepare_recipe("kuaizhu", {"duration": 99})
     assert caught.value.translation_key == "duration_out_of_range"
     assert caught.value.translation_placeholders == {"minimum": "28", "maximum": "28"}
-
-
-def test_error_translations_match():
-    def placeholders(value):
-        return {name for _, name, _, _ in string.Formatter().parse(value) if name}
-
-    root = Path(__file__).parents[1] / "custom_components/xiaomi_miio_cooker"
-    base = json.loads((root / "strings.json").read_text())["exceptions"]
-    for language in ("en", "zh-Hans"):
-        translated = json.loads((root / f"translations/{language}.json").read_text())[
-            "exceptions"
-        ]
-        assert base.keys() == translated.keys()
-        for key in base:
-            assert placeholders(base[key]["message"]) == placeholders(
-                translated[key]["message"]
-            )

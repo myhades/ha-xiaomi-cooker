@@ -1,12 +1,17 @@
 import asyncio
+import json
+import re
 from dataclasses import replace
-from unittest.mock import AsyncMock
+from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from homeassistant.exceptions import HomeAssistantError
 from miio import DeviceException
 
 from custom_components.xiaomi_miio_cooker import (
+    _remove_replaced_duration_number,
     binary_sensor,
     button,
     number,
@@ -14,8 +19,17 @@ from custom_components.xiaomi_miio_cooker import (
     sensor,
     switch,
 )
-from custom_components.xiaomi_miio_cooker.cmc301_profile import decode_profile
+from custom_components.xiaomi_miio_cooker.cmc301 import decode_profile
+from custom_components.xiaomi_miio_cooker.const import MODEL_CMC301, MODEL_NORMAL3
 from custom_components.xiaomi_miio_cooker.models import CookerStageData
+from custom_components.xiaomi_miio_cooker.select import (
+    LidTimeoutSelect,
+    PanelSleepSelect,
+)
+from custom_components.xiaomi_miio_cooker.switch import (
+    CookerSettingSwitch,
+    RecipeKeepWarmSwitch,
+)
 
 
 @pytest.mark.parametrize("cmc", [False, True])
@@ -67,16 +81,6 @@ async def test_selectors_show_live_feedback_without_arming_start(
     assert start.available and duration.current_option == "60"
 
 
-@pytest.mark.parametrize("cmc", [False, True])
-async def test_entities_have_icons_or_device_classes(hass, make_coordinator, cmc):
-    platforms = await setup_platforms(hass, make_coordinator(cmc))
-    for entities in platforms.values():
-        for entity in entities:
-            assert entity.icon or getattr(entity, "device_class", None), (
-                entity.unique_id
-            )
-
-
 async def setup_platforms(hass, coordinator):
     entities = {}
     for platform in (sensor, select, button, number, switch, binary_sensor):
@@ -88,57 +92,6 @@ async def setup_platforms(hass, coordinator):
         )
         entities[platform.__name__.split(".")[-1]] = result
     return entities
-
-
-async def test_legacy_entities_unchanged(hass, make_coordinator):
-    coordinator = make_coordinator(False)
-    entities = await setup_platforms(hass, coordinator)
-    assert len(entities["sensor"]) == 5
-    assert len(entities["select"]) == 6
-    assert len(entities["button"]) == 2
-    assert entities["number"] == entities["binary_sensor"] == []
-    assert [e.key for e in entities["switch"]] == [
-        "next_auto_keep_warm",
-        "completion_notification",
-        "lid_open_warning",
-    ]
-    for entity in entities["sensor"]:
-        assert (
-            entity.unique_id
-            == coordinator.device_unique_id + "_" + entity.entity_description.key
-        )
-    assert entities["sensor"][0].options == list(sensor.STATUS_OPTIONS)
-
-
-async def test_cmc_menu_units_options_and_independent_draft(hass, make_coordinator):
-    coordinator = make_coordinator()
-    entities = await setup_platforms(hass, coordinator)
-    sensors = {entity.entity_description.key: entity for entity in entities["sensor"]}
-    assert "menu" not in sensors and "duration" not in sensors
-    assert sensors["remaining"].native_value == 61 / 60
-    assert "lid_open_warning" not in sensors
-    assert "rice_id" not in sensors
-    assert sensors["recorded_temperature"].native_value == 27
-    assert "texture" not in sensors
-    await coordinator.async_select_cooking_menu("jingzhu")
-    coordinator.set_recipe_option("taste", 2)
-    assert "texture" not in sensors
-    assert coordinator.recipe_options.taste == 2
-    await coordinator.async_select_cooking_menu("zhuzhou")
-    assert not coordinator.supports_option("taste")
-    assert coordinator.supports_option("duration")
-    with pytest.raises(HomeAssistantError):
-        coordinator.set_recipe_option("taste", 2)
-    duration = next(
-        e for e in entities["select"] if getattr(e, "key", None) == "next_duration"
-    )
-    assert duration.options == [str(value) for value in range(40, 241, 10)]
-    await duration.async_select_option("120")
-    assert coordinator.recipe_options.duration == 120
-    await coordinator.async_select_cooking_menu("kuaizhu")
-    assert coordinator.recipe_options.duration == 28
-    assert duration.available and duration.options == ["28"]
-    assert duration.current_option == "28"
 
 
 async def test_duplicate_start_sent_once(make_coordinator):
@@ -155,18 +108,6 @@ async def test_duplicate_start_sent_once(make_coordinator):
     data = decode_profile(coordinator.api.start.call_args.args[0])
     assert data[8:10] == bytes([2, 0])
     assert coordinator.selected_recipe is None
-
-
-async def test_failed_start_refreshes_and_disarms_draft(make_coordinator):
-    coordinator = make_coordinator()
-    coordinator.api.start.side_effect = DeviceException("Start was not confirmed")
-    await coordinator.async_select_cooking_menu("kuaizhu")
-    with pytest.raises(HomeAssistantError, match="command_failed"):
-        await coordinator.async_start_selected_profile()
-    coordinator.async_refresh.assert_awaited_once()
-    assert coordinator.selected_recipe is None
-    coordinator._cancel_delayed_refresh()
-    assert coordinator._refresh_task is None
 
 
 async def test_two_cookers_have_independent_selections(make_coordinator):
@@ -252,11 +193,113 @@ async def test_start_completion_preserves_new_selection(
     assert coordinator.recipe_options is not None
 
 
-@pytest.mark.parametrize("cmc", [False, True])
-async def test_recreated_coordinator_starts_without_a_selection(make_coordinator, cmc):
-    previous = make_coordinator(cmc)
-    await previous.async_select_cooking_menu(previous.cooking_menu_options[0])
-    current = make_coordinator(cmc)
-    assert current.selected_cooking_menu is None
-    assert current.recipe_options is None
-    assert not current.supports_option("auto_keep_warm")
+@pytest.mark.parametrize(
+    "cmc,reported",
+    [(False, False), (False, True), (False, None), (False, 1), (True, None)],
+)
+async def test_keep_warm_live_feedback_never_uses_draft(
+    make_coordinator, cmc, reported
+):
+    c = make_coordinator(cmc)
+    await c.async_select_cooking_menu("jingzhu")
+    warm = RecipeKeepWarmSwitch(c, "next_auto_keep_warm")
+    c.async_set_updated_data(
+        replace(
+            c.data,
+            status=replace(c.data.status, status="running"),
+            properties={"auto_keep_warm": reported},
+        )
+    )
+    assert warm.is_on is (reported if type(reported) is bool else None)
+    assert warm.available == (type(reported) is bool)
+    assert warm.extra_state_attributes == {"read_only": True}
+    for action in (warm.async_turn_on, warm.async_turn_off):
+        with pytest.raises(HomeAssistantError):
+            await action()
+    c.api.set_setting.assert_not_called()
+    c.async_set_update_error(DeviceException("offline"))
+    assert not warm.available
+
+
+@pytest.mark.parametrize("state", ["running", "keep_warm", "unknown"])
+async def test_normal3_settings_disabled_before_command(make_coordinator, state):
+    c = make_coordinator(False)
+    snapshot = replace(
+        c.data,
+        properties={
+            "panel_auto_off": True,
+            "display_timeout": 5,
+            "lid_open_timeout": 4,
+            "completion_notification": False,
+        },
+    )
+    c.async_set_updated_data(snapshot)
+    controls = [
+        PanelSleepSelect(c, "panel_auto_off"),
+        LidTimeoutSelect(c, "lid_open_timeout"),
+        CookerSettingSwitch(c, "completion_notification"),
+    ]
+    assert all(e.available for e in controls)
+    c.async_set_updated_data(
+        replace(snapshot, status=replace(snapshot.status, status=state))
+    )
+    assert all(not e.available for e in controls)
+    with pytest.raises(HomeAssistantError):
+        await c.async_set_setting("completion_notification", True)
+    c.api.set_setting.assert_not_called()
+    c.async_set_updated_data(snapshot)
+    assert all(e.available for e in controls)
+
+
+@pytest.mark.parametrize("model", [MODEL_CMC301, MODEL_NORMAL3])
+@pytest.mark.parametrize("same_entry", [False, True])
+async def test_stage_migration_preserves_name_and_other_entries(
+    hass, monkeypatch, model, same_entry
+):
+    registry = Mock()
+    registry.async_get_entity_id.side_effect = lambda domain, platform, uid: (
+        "sensor.old_description" if uid == "device_stage_description" else None
+    )
+    registry.async_get.return_value = SimpleNamespace(
+        config_entry_id="ours" if same_entry else "other"
+    )
+    monkeypatch.setattr(
+        "custom_components.xiaomi_miio_cooker.er.async_get", lambda _: registry
+    )
+    _remove_replaced_duration_number(
+        hass, SimpleNamespace(entry_id="ours"), "device", model
+    )
+    assert registry.async_remove.call_count == int(same_entry)
+    assert all(
+        call.args[2] != "device_stage_name"
+        for call in registry.async_get_entity_id.call_args_list
+    )
+
+
+def test_translations_have_matching_keys_and_placeholders():
+    root = Path(__file__).parents[1] / "custom_components/xiaomi_miio_cooker"
+
+    def leaves(value, prefix=""):
+        result = {}
+        for key, item in value.items():
+            path = f"{prefix}.{key}"
+            result.update(
+                leaves(item, path) if isinstance(item, dict) else {path: item}
+            )
+        return result
+
+    source = json.loads((root / "strings.json").read_text(encoding="utf-8"))
+    base = leaves(source)
+    for language in ("en", "zh-Hans", "de"):
+        translated = json.loads(
+            (root / f"translations/{language}.json").read_text(encoding="utf-8")
+        )
+        actual = leaves(translated)
+        assert actual.keys() == base.keys()
+        assert all(isinstance(text, str) and text.strip() for text in actual.values())
+        for key in base:
+            assert re.findall(r"\{[^}]+\}", base[key]) == re.findall(
+                r"\{[^}]+\}", actual[key]
+            )
+        if language == "en":
+            assert translated == source

@@ -110,7 +110,7 @@ def get_menu_key(menu_id: int | None, model: str | None = None) -> str | None:
 
 @lru_cache(maxsize=1)
 def _load_normal3_profiles() -> tuple[CookingProfile, ...]:
-    from .normal3_profile import decode_profile
+    from .normal3 import decode_profile
 
     raw = json.loads(
         Path(__file__).with_name("normal3_recipes.json").read_text(encoding="utf-8")
@@ -126,7 +126,7 @@ def _load_normal3_profiles() -> tuple[CookingProfile, ...]:
 
 @lru_cache(maxsize=1)
 def _load_cmc301_profiles() -> tuple[CookingProfile, ...]:
-    from .cmc301_profile import decode_profile
+    from .cmc301 import decode_profile
 
     raw = json.loads(
         Path(__file__).with_name("cmc301_recipes.json").read_text(encoding="utf-8")

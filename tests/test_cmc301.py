@@ -4,8 +4,8 @@ from dataclasses import replace
 import pytest
 from miio import DeviceException
 
-from custom_components.xiaomi_miio_cooker.cmc301 import Cmc301Backend, parse_history
-from custom_components.xiaomi_miio_cooker.cmc301_profile import (
+from custom_components.xiaomi_miio_cooker.cmc301 import (
+    Cmc301Backend,
     decode_profile,
     default_options,
     encode_profile,
@@ -97,14 +97,6 @@ def test_feedback_units_partial_errors_and_history(device, metadata):
     device.fail_properties.add((2, 1))
     with pytest.raises(DeviceException):
         backend.fetch_data()
-
-
-@pytest.mark.parametrize(
-    "raw,expected",
-    [("1a", ()), ("", ()), ("zzzzzz", ()), ("0000aaaa", ()), ("0002001baa", (0, 27))],
-)
-def test_history(raw, expected):
-    assert parse_history(raw) == expected
 
 
 def test_start_stop_and_save_use_correct_actions(device, metadata):

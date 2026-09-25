@@ -86,9 +86,9 @@ class XiaomiMiioCookerApi:
 
                 self._backend = Cmc301Backend(self._device, metadata)
             else:
-                from .legacy import LegacyCookerBackend
+                from .normal3 import Normal3Backend
 
-                self._backend = LegacyCookerBackend(self.host, self.token, metadata)
+                self._backend = Normal3Backend(self.host, self.token, metadata)
         return self._backend
 
     def fetch_data(self, force_device_info: bool = False) -> CookerData:
@@ -102,7 +102,7 @@ class XiaomiMiioCookerApi:
             self._device_info.model if self._device_info else None
         )
         if model == MODEL_CMC301:
-            from .cmc301_profile import validate_bundled_profile
+            from .cmc301 import validate_bundled_profile
 
             validate_bundled_profile(profile)
         elif len(profile) == 352:

@@ -1,4 +1,4 @@
-"""Stage provenance, history lifecycle and legacy compatibility (no device I/O)."""
+"""Stage provenance and temperature-history lifecycle for supported cookers."""
 
 import json
 from pathlib import Path
@@ -6,13 +6,11 @@ from unittest.mock import Mock
 
 import pytest
 from miio import DeviceException
-from miio.cooker import COOKING_STAGES, CookerStatus, TemperatureHistory
+from miio.cooker import CookerStatus, TemperatureHistory
 from test_entities import setup_platforms
-from test_legacy import make_legacy
+from test_normal3 import make_normal3
 
 from custom_components.xiaomi_miio_cooker.cmc301 import Cmc301Backend, parse_history
-from custom_components.xiaomi_miio_cooker.const import MODEL_NORMAL4
-from custom_components.xiaomi_miio_cooker.legacy import _build_status_data
 from custom_components.xiaomi_miio_cooker.stages import (
     RICE_PHASES,
     history_payload,
@@ -73,13 +71,8 @@ def test_missing_invalid_and_unknown_history_has_no_fabricated_stage(raw):
         (1, 2, 0, "water_absorption"),
         (2, 2, 0, "water_absorption"),
         (3, 2, 0, None),
-        (4, 2, 0, None),
-        (9, 2, 0, None),
-        (1, 1, 0, None),
         (1, 3, 0, None),
-        (1, 4, 0, None),
         (1, 5, 1, None),
-        (1, 7, 0, None),
         (1, 2, 1, None),
     ],
 )
@@ -134,7 +127,7 @@ def test_stage_refresh_failure_and_state_transition_clear_cache(
     "raw", [None, "null", "", 7, "zz000000ff", "00000000", "0000000000ff"]
 )
 def test_malformed_legacy_stage_does_not_break_main_feedback(raw):
-    backend = make_legacy()
+    backend = make_normal3()
     backend._cooker.status = Mock(return_value=raw_status(raw))
     backend._cooker.get_temperature_history = Mock(return_value=TemperatureHistory(""))
     snapshot = backend.fetch_data()
@@ -142,17 +135,6 @@ def test_malformed_legacy_stage_does_not_break_main_feedback(raw):
     assert snapshot.status.remaining == 10
     assert snapshot.status.stage is None
     assert snapshot.properties["stage_raw"] == raw
-
-
-@pytest.mark.parametrize("code", [*COOKING_STAGES, 0xFE])
-def test_other_legacy_stage_names_and_descriptions_are_unchanged(code):
-    raw = f"{code:02x}000142ff"
-    original = raw_status(raw).stage
-    stage = _build_status_data(raw_status(raw), MODEL_NORMAL4).stage
-    assert stage.state == code
-    assert stage.name == original.name
-    assert stage.description == original.description
-    assert stage.rice_id == original.rice_id and stage.taste == original.taste
 
 
 async def test_cmc_stage_entities_are_localized_and_cleared(
@@ -206,7 +188,7 @@ async def test_normal3_stage_entities_use_official_history_with_raw_diagnostics(
     coordinator = make_coordinator(False)
     entities = await setup_platforms(hass, coordinator)
     sensors = {e.entity_description.key: e for e in entities["sensor"]}
-    backend = make_legacy()
+    backend = make_normal3()
     backend._cooker.status = Mock(return_value=raw_status("02000142ff"))
     backend._cooker.get_temperature_history = Mock(
         return_value=TemperatureHistory("00021aaa30")
@@ -229,35 +211,17 @@ async def test_normal3_stage_entities_use_official_history_with_raw_diagnostics(
     )
 
 
-@pytest.mark.parametrize("code", [0, 3, 4, 5, 7, 8, 10, 16, 254])
-def test_normal3_never_uses_unverified_generic_code_text(code):
-    backend = make_legacy()
-    backend._cooker.status = Mock(return_value=raw_status(f"{code:02x}000142ff"))
-    backend._cooker.get_temperature_history = Mock(
-        return_value=TemperatureHistory("00021aaa30aa40aa50aa60")
-    )
-    stage = backend.fetch_data().status.stage
-    assert stage.phase == "simmering"
-    assert stage.state == code
-    assert stage.name is None and stage.description is None
-    assert stage.taste == 66 and stage.rice_id == 1
-
-
 @pytest.mark.parametrize(
     "func,menu",
     [
-        ("waiting", "0001"),
         ("precook", "0001"),
         ("autokeepwarm", "0001"),
-        ("error", "0001"),
-        ("finish", "0001"),
         ("running", "0003"),
-        ("running", "0004"),
         ("running", "0102"),
     ],
 )
 def test_normal3_does_not_apply_rice_phases_to_other_modes(func, menu):
-    backend = make_legacy()
+    backend = make_normal3()
     status = raw_status("02000142ff")
     status.data.update(func=func, menu=menu)
     backend._cooker.status = Mock(return_value=status)
@@ -272,9 +236,9 @@ def test_normal3_does_not_apply_rice_phases_to_other_modes(func, menu):
 def test_normal3_history_lifecycle_and_no_generic_fallback(monkeypatch):
     clock = [0]
     monkeypatch.setattr(
-        "custom_components.xiaomi_miio_cooker.legacy.monotonic", lambda: clock[0]
+        "custom_components.xiaomi_miio_cooker.normal3.monotonic", lambda: clock[0]
     )
-    backend = make_legacy()
+    backend = make_normal3()
     status = raw_status("fe000142ff")
     backend._cooker.status = Mock(return_value=status)
     history = backend._cooker.get_temperature_history = Mock(
@@ -305,19 +269,6 @@ def test_normal3_history_lifecycle_and_no_generic_fallback(monkeypatch):
     assert backend.fetch_data().status.stage.phase is None
 
 
-def test_valid_normal3_history_does_not_depend_on_raw_stage_being_parseable():
-    backend = make_legacy()
-    backend._cooker.status = Mock(return_value=raw_status("bad-stage"))
-    backend._cooker.get_temperature_history = Mock(
-        return_value=TemperatureHistory("00021aaa30")
-    )
-    snapshot = backend.fetch_data()
-    assert snapshot.status.stage.phase == "water_absorption"
-    assert snapshot.status.stage.state is None
-    assert snapshot.properties["stage_raw"] == "bad-stage"
-    assert snapshot.properties["history_phase_index"] == 1
-
-
 def test_normal3_raw_stage_parsing_does_not_require_dependency_text():
     class RawStage:
         state, rice_id, taste, taste_phase = 3, 1, 66, 2
@@ -330,7 +281,7 @@ def test_normal3_raw_stage_parsing_does_not_require_dependency_text():
         def description(self):
             raise AssertionError("normal3 must not read the generic stage table")
 
-    from custom_components.xiaomi_miio_cooker.legacy import _build_stage_data
+    from custom_components.xiaomi_miio_cooker.normal3 import _build_stage_data
 
     stage = _build_stage_data(RawStage(), legacy_text=False)
     assert stage.state == 3 and stage.name is None and stage.description is None

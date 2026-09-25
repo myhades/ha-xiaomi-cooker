@@ -11,7 +11,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from miio import DeviceException
 
-from . import cmc301_profile, normal3_profile
+from . import cmc301, normal3
 from .api import CookerData, UnsupportedModelError, XiaomiMiioCookerApi
 from .const import (
     COMMAND_REFRESH_DELAY,
@@ -69,8 +69,8 @@ class XiaomiMiioCookerCoordinator(DataUpdateCoordinator[CookerData]):
     @property
     def recipe_codec(self) -> RecipeCodec | None:
         return {
-            MODEL_CMC301: cmc301_profile,
-            MODEL_NORMAL3: normal3_profile,
+            MODEL_CMC301: cmc301,
+            MODEL_NORMAL3: normal3,
         }.get(self.config_entry.data.get("model"))
 
     @property

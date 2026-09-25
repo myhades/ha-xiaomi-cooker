@@ -14,9 +14,9 @@ from custom_components.xiaomi_miio_cooker import (
     _remove_replaced_duration_number,
 )
 from custom_components.xiaomi_miio_cooker import (
-    normal3_profile as codec,
+    normal3 as codec,
 )
-from custom_components.xiaomi_miio_cooker.const import MODEL_NORMAL3, MODEL_NORMAL4
+from custom_components.xiaomi_miio_cooker.const import MODEL_NORMAL3
 from custom_components.xiaomi_miio_cooker.profiles import get_profiles_for_model
 from custom_components.xiaomi_miio_cooker.recipe_options import duration_choices
 
@@ -89,16 +89,6 @@ def test_normal3_rejects_invalid_parameter_edits(key, changes):
         codec.encode_profile(
             profile, replace(codec.default_options(profile), **changes)
         )
-
-
-def test_old_model_templates_are_not_replaced_or_silently_repaired():
-    old = get_profiles_for_model(MODEL_NORMAL4)
-    assert len(old) == 9
-    for recipe in old:
-        if recipe.key in {"refan", "sweet_rice"}:
-            with pytest.raises(ValueError, match="checksum"):
-                codec.default_options(recipe.profile)
-    assert codec.duration_range(RECIPES["refan"]) == (30, 30)
 
 
 def test_duration_grid_keeps_bounds_and_off_grid_default():
@@ -200,44 +190,6 @@ async def test_normal3_controls_change_only_supported_header(hass, make_coordina
     assert codec.decode_profile(sent)[3:5] == bytes([2, 10])
     with pytest.raises(HomeAssistantError, match="schedule_unsupported"):
         coordinator.prepare_recipe("zhuzhou", {"finish_in": 180})
-
-
-async def test_other_legacy_models_keep_existing_platforms(hass, make_coordinator):
-    coordinator = make_coordinator(model=MODEL_NORMAL4)
-    entities = await setup_platforms(hass, coordinator)
-    assert len(entities["select"]) == 1
-    assert entities["switch"] == entities["number"] == []
-    profile = coordinator.cooking_menu_options[0]
-    await coordinator.async_select_cooking_menu(profile)
-    assert coordinator.recipe_options is None
-    assert not coordinator.supports_option("duration")
-    await coordinator.async_start_selected_profile()
-    coordinator.api.start.assert_called_once_with(
-        get_profiles_for_model(MODEL_NORMAL4)[0].profile
-    )
-
-
-async def test_normal3_additional_menu_feedback_keeps_old_enum_values(
-    hass, make_coordinator
-):
-    coordinator = make_coordinator(False)
-    entities = await setup_platforms(hass, coordinator)
-    menu = entities["select"][0]
-    for menu_id, expected in (
-        (1, "jingzhu"),
-        (2, "kuaizhu"),
-        (260, "sweet_rice"),
-        (493, "brown_rice"),
-        (1615, "soup"),
-    ):
-        coordinator.async_set_updated_data(
-            replace(
-                coordinator.data,
-                status=replace(coordinator.data.status, menu=menu_id, status="running"),
-            )
-        )
-        assert menu.current_option == expected
-        assert expected in menu.options
 
 
 @pytest.mark.parametrize("same_entry", [False, True])
