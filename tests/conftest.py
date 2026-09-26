@@ -142,3 +142,4 @@ def make_coordinator(hass, metadata):
     yield make
     for coordinator in coordinators:
         coordinator._cancel_delayed_refresh()
+        coordinator._cancel_details_refresh()

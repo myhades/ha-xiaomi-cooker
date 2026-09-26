@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from dataclasses import replace
+from functools import partial
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -63,7 +64,9 @@ class XiaomiMiioCookerCoordinator(DataUpdateCoordinator[CookerData]):
         self.stop_revision = 0
         self.recipe_options: RecipeOptions | None = None
         self._refresh_task: asyncio.Task | None = None
+        self._details_task: asyncio.Task | None = None
         entry.async_on_unload(self._cancel_delayed_refresh)
+        entry.async_on_unload(self._cancel_details_refresh)
 
     @property
     def is_cmc301(self) -> bool:
@@ -269,8 +272,14 @@ class XiaomiMiioCookerCoordinator(DataUpdateCoordinator[CookerData]):
 
     async def _async_update_data(self) -> CookerData:
         """Fetch the latest cooker state."""
+        self._cancel_details_refresh()
         try:
-            snapshot = await self.hass.async_add_executor_job(self.api.fetch_data)
+            fetch = (
+                partial(self.api.fetch_data, core_only=True)
+                if self.is_cmc301
+                else self.api.fetch_data
+            )
+            snapshot = await self.hass.async_add_executor_job(fetch)
             if (
                 self.config_entry.data.get("model") == MODEL_NORMAL3
                 and snapshot.status.status == "scheduled"
@@ -299,11 +308,42 @@ class XiaomiMiioCookerCoordinator(DataUpdateCoordinator[CookerData]):
                     snapshot.status.status,
                     values,
                 )
+            if self.is_cmc301 and not self._command_lock.locked():
+                self._details_task = self.hass.async_create_background_task(
+                    self._async_refresh_details(snapshot),
+                    f"{DOMAIN} details {self.config_entry.entry_id}",
+                )
             return snapshot
         except UnsupportedModelError as err:
             raise UpdateFailed(f"Unsupported Xiaomi cooker model: {err}") from err
         except DeviceException as err:
             raise UpdateFailed(f"Unable to update Xiaomi cooker state: {err}") from err
+
+    def _cancel_details_refresh(self) -> None:
+        if self._details_task is not None:
+            self._details_task.cancel()
+            self._details_task = None
+
+    async def _async_refresh_details(self, snapshot: CookerData) -> None:
+        # Let DataUpdateCoordinator publish the core snapshot before any slow RPC.
+        await asyncio.sleep(0)
+        for kind in ("properties", "history", "settings"):
+            if self.data is not snapshot or not self.last_update_success:
+                return
+            try:
+                updated = await self.hass.async_add_executor_job(
+                    self.api.fetch_detail, snapshot, kind
+                )
+            except (DeviceException, ValueError) as err:
+                _LOGGER.debug("Unable to update CMC301 %s: %s", kind, err)
+                continue
+            # A new poll, command or unload may supersede the in-flight read.
+            if self.data is not snapshot or not self.last_update_success:
+                return
+            if updated != snapshot:
+                self.data = updated
+                self.async_update_listeners()
+            snapshot = self.data
 
     async def async_start(self, profile: str | ScheduledRecipe) -> None:
         """Start a cooking profile."""
@@ -400,6 +440,7 @@ class XiaomiMiioCookerCoordinator(DataUpdateCoordinator[CookerData]):
 
     async def _run_command(self, command, *args) -> None:
         """Refresh even after an uncertain write; never repeat the write here."""
+        self._cancel_details_refresh()
         try:
             await self.hass.async_add_executor_job(command, *args)
         except DeviceException as err:

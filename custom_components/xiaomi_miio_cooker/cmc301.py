@@ -151,6 +151,20 @@ PROPERTIES = {
     "reset_flag": (2, 31),
     "remote_control": (7, 1),
 }
+CORE_PROPERTIES = {
+    key: PROPERTIES[key]
+    for key in (
+        "status_code",
+        "fault",
+        "mode_code",
+        "recipe_id",
+        "duration",
+        "remaining_seconds",
+    )
+}
+DETAIL_PROPERTIES = {
+    key: address for key, address in PROPERTIES.items() if key not in CORE_PROPERTIES
+}
 STATES = {
     1: "idle",
     2: "running",
@@ -179,8 +193,11 @@ class Cmc301Backend:
         self._history_context = None
         self._history_stage = None
         self._panel_recipe_id = None
+        self._settings = None
+        self._settings_at = None
+        self._detail_values = dict.fromkeys(DETAIL_PROPERTIES)
 
-    def _read(self, mapping: dict) -> dict:
+    def _read(self, mapping: dict, *, retries: int = 1) -> dict:
         values = {}
         items = list(mapping.items())
         for offset in range(0, len(items), 6):
@@ -188,7 +205,7 @@ class Cmc301Backend:
             params = [
                 {"did": "miot", "siid": siid, "piid": piid} for _, (siid, piid) in chunk
             ]
-            response = self.device.send("get_properties", params, retry_count=1)
+            response = self.device.send("get_properties", params, retry_count=retries)
             if not isinstance(response, list):
                 raise DeviceException("Invalid MIoT property response")
             by_id = {
@@ -214,8 +231,8 @@ class Cmc301Backend:
             raise DeviceException(f"MIoT action {siid}.{aiid} failed ({code})")
         return result
 
-    def _read_settings(self) -> bytearray:
-        result = self._action(6, 2, [], retries=1)
+    def _read_settings(self, *, retries: int = 1) -> bytearray:
+        result = self._action(6, 2, [], retries=retries)
         if not isinstance(result.get("out"), list):
             raise DeviceException("Invalid CMC301 settings response")
         value = next(
@@ -231,16 +248,76 @@ class Cmc301Backend:
         return bytearray.fromhex(value)
 
     def fetch_data(self) -> CookerData:
-        values = self._read(PROPERTIES)
+        """Full snapshot for validation and direct protocol clients."""
+        snapshot = self.fetch_core_data()
+        snapshot = self.fetch_detail(snapshot, "properties")
+        snapshot = self.fetch_detail(snapshot, "settings", force=True)
+        return self.fetch_detail(snapshot, "history")
+
+    def fetch_core_data(self) -> CookerData:
+        """Read live controls first; optional reads never delay this snapshot."""
+        values = self._read(CORE_PROPERTIES)
         if type(values["status_code"]) is not int:
             raise DeviceException("CMC301 did not return its working status")
         if values["mode_code"] == 5 and type(values["recipe_id"]) is int:
             self._panel_recipe_id = values["recipe_id"]
         values["panel_recipe_id"] = self._panel_recipe_id
-        try:
-            settings = self._read_settings()
-        except DeviceException:
-            settings = None
+        context = (values["status_code"], values["recipe_id"], values["fault"])
+        if context != self._history_context:
+            self._history_context = context
+            self._history_at = None
+            self._history = ()
+            self._history_stage = None
+            self._detail_values = dict.fromkeys(DETAIL_PROPERTIES)
+        values.update(self._detail_values)
+        return self._build_snapshot(values)
+
+    def fetch_detail(
+        self, snapshot: CookerData, kind: str, *, force: bool = False
+    ) -> CookerData:
+        """At most one optional RPC, with no retries; called under the API lock."""
+        now = monotonic()
+        values = dict(snapshot.properties)
+        context = (values["status_code"], values["recipe_id"], values["fault"])
+        if kind != "settings" and context != self._history_context:
+            return snapshot
+        if kind == "properties":
+            try:
+                self._detail_values = self._read(DETAIL_PROPERTIES, retries=0)
+            except DeviceException:
+                self._detail_values = dict.fromkeys(DETAIL_PROPERTIES)
+            values.update(self._detail_values)
+        elif kind == "settings":
+            if force or self._settings_at is None or now - self._settings_at >= 120:
+                try:
+                    self._settings = self._read_settings(retries=0)
+                except DeviceException:
+                    self._settings = None
+                self._settings_at = monotonic()
+        elif kind == "history":
+            interval = (
+                30
+                if (values["status_code"] == 2 and values["recipe_id"] in (1, 2))
+                or (values["status_code"] in (2, 3, 4) and not self._history)
+                else 120
+            )
+            if self._history_at is None or now - self._history_at >= interval:
+                try:
+                    payload = history_payload(
+                        self._read({"history": (2, 28)}, retries=0)["history"]
+                    )
+                    self._history = tuple(value for value in payload if value != 0xAA)
+                    self._history_stage = rice_history_stage(payload)
+                except DeviceException:
+                    self._history = ()
+                    self._history_stage = None
+                self._history_at = monotonic()
+        else:
+            raise ValueError("Unknown detail group")
+        return self._build_snapshot(values)
+
+    def _build_snapshot(self, values: dict) -> CookerData:
+        settings = self._settings
         values.update(
             {
                 "panel_auto_off": settings[0] == 0
@@ -255,40 +332,16 @@ class Cmc301Backend:
                 else None,
             }
         )
-        now = monotonic()
-        history_context = (values["status_code"], values["recipe_id"], values["fault"])
-        # Official running page only shows these phases for the two rice menus.
-        show_rice_stage = (
-            values["status_code"] == 2
-            and values["recipe_id"] in (1, 2)
-            and values["fault"] == 0
-        )
-        # The device clears history on stop. At the beginning of a scheduled cook
-        # history is empty, then appears without a change in status code 3.
-        interval = (
-            30
-            if show_rice_stage
-            or (values["status_code"] in (2, 3, 4) and not self._history)
-            else 120
-        )
-        if (
-            history_context != self._history_context
-            or self._history_at is None
-            or now - self._history_at >= interval
-        ):
-            self._history_context = history_context
-            self._history_at = now
-            try:
-                payload = history_payload(self._read({"history": (2, 28)})["history"])
-                self._history = tuple(value for value in payload if value != 0xAA)
-                self._history_stage = rice_history_stage(payload)
-            except DeviceException:
-                self._history = ()
-                self._history_stage = None
         values["history_samples"] = len(self._history)
         values["recorded_temperature"] = self._history[-1] if self._history else None
         values["stage_source"] = "temperature_history"
-        stage = self._history_stage if show_rice_stage else None
+        stage = (
+            self._history_stage
+            if values["status_code"] == 2
+            and values["recipe_id"] in (1, 2)
+            and values["fault"] == 0
+            else None
+        )
         remaining = values["remaining_seconds"]
         warming = values["status_code"] == 4
         recipe_id = values["recipe_id"]
@@ -423,8 +476,12 @@ class Cmc301Backend:
         settings = self._read_settings()
         for index, encoded in updates.items():
             settings[index] = encoded
+        self._settings_at = None
+        self._settings = None
         self._action(6, 1, [{"piid": 1, "value": settings.hex()}])
         readback = self._read_settings()
+        self._settings = readback
+        self._settings_at = monotonic()
         if any(readback[index] != encoded for index, encoded in updates.items()):
             raise CookerCommandError(
                 "write_unconfirmed", "Settings write was not confirmed"

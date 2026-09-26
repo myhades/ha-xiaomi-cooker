@@ -85,6 +85,8 @@ Temperature comes from recorded temperature history when no direct reading is av
 
 **Automatic keep warm** is unavailable during cooking on both models. normal3 settings are unavailable until the cooker is idle.
 
+CMC301 publishes its status, menu, duration and countdown after one core request. Other properties, temperature history and settings refresh afterward without delaying that update. Settings are cached for up to two minutes; changes made through HA update their readback immediately. Device requests remain serialized, so a command may still wait for a request already in progress. Normal polling remains every 30 seconds, with an immediate core refresh and a two-second follow-up after commands.
+
 **Cooking finished** is an event entity shared by both models. Each observed cooking cycle emits one `finished` event when the device reports completion or enters automatic keep-warm. Its state is the last event timestamp, with `event_type`, `recipe` and `keep_warm_type` attributes. Stopping, manual keep-warm and reconnecting to an already finished cycle do not emit completion events. Polling can miss a brief completion state or a cycle that finishes while disconnected.
 
 **Status** distinguishes `automatic_keep_warm` from manual `keep_warm` on both models. **Current menu** retains the preceding recipe during automatic keep-warm and shows the keep-warm recipe for manual operation. **Current duration** shows the current phase's total minutes: the device's cooking or manual keep-warm duration, or the 1440-minute automatic keep-warm limit documented by both official plugins. Missing or ambiguous feedback remains unknown.

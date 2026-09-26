@@ -90,10 +90,28 @@ class XiaomiMiioCookerApi:
                 self._backend = Normal3Backend(self.host, self.token, metadata)
         return self._backend
 
-    def fetch_data(self, force_device_info: bool = False) -> CookerData:
+    def fetch_data(
+        self, force_device_info: bool = False, *, core_only: bool = False
+    ) -> CookerData:
         with self._lock:
             self._get_device_info(force_device_info)
-            return self._get_backend().fetch_data()
+            backend = self._get_backend()
+            if core_only and self._device_info.model == MODEL_CMC301:
+                from .cmc301 import Cmc301Backend
+
+                assert isinstance(backend, Cmc301Backend)
+                return backend.fetch_core_data()
+            return backend.fetch_data()
+
+    def fetch_detail(self, snapshot: CookerData, kind: str) -> CookerData:
+        """Release the device lock between optional reads so controls can run."""
+        from .cmc301 import Cmc301Backend
+
+        with self._lock:
+            backend = self._get_backend()
+            if not isinstance(backend, Cmc301Backend):
+                raise ValueError("Split detail reads are only supported on CMC301")
+            return backend.fetch_detail(snapshot, kind)
 
     def validate_profile(self, profile: str) -> None:
         """Preflight all service targets before any start is sent."""

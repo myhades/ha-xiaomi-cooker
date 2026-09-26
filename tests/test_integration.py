@@ -1,4 +1,6 @@
+import asyncio
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import replace
 from threading import Event
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
@@ -11,7 +13,7 @@ from miio import DeviceException
 from custom_components import xiaomi_miio_cooker as integration
 from custom_components.xiaomi_miio_cooker import services
 from custom_components.xiaomi_miio_cooker.api import XiaomiMiioCookerApi
-from custom_components.xiaomi_miio_cooker.cmc301 import decode_profile
+from custom_components.xiaomi_miio_cooker.cmc301 import Cmc301Backend, decode_profile
 from custom_components.xiaomi_miio_cooker.config_flow import (
     CannotConnect,
     _async_validate_input,
@@ -125,6 +127,76 @@ def test_poll_and_command_share_one_lock(metadata):
         poll.result(5)
         command.result(5)
     api._backend.stop.assert_called_once()
+
+
+@pytest.mark.parametrize("outcome", ["complete", "superseded", "offline", "unload"])
+async def test_core_publishes_before_slow_details_and_late_results_are_ignored(
+    hass, make_coordinator, device, metadata, outcome
+):
+    coordinator = make_coordinator()
+    api = XiaomiMiioCookerApi("192.0.2.1", "0" * 32, MODEL_CMC301)
+    api._device_info = metadata
+    api._backend = Cmc301Backend(device, metadata)
+    coordinator.api = api
+    device.values[2, 1] = 3
+    entered, release, returned = Event(), Event(), Event()
+    send = device.send
+
+    def blocked_detail(method, params, retry_count=None):
+        if method == "get_properties" and params[0]["piid"] == 26:
+            entered.set()
+            try:
+                assert release.wait(5)
+            finally:
+                returned.set()
+        return send(method, params, retry_count)
+
+    device.send = blocked_detail
+    await type(coordinator).async_refresh(coordinator)
+    core = coordinator.data
+    task = coordinator._details_task
+    try:
+        assert await asyncio.to_thread(entered.wait, 5)
+        assert coordinator.data.status.status == "scheduled"
+        assert coordinator.cooking_active  # Stop is already enabled.
+        if outcome == "superseded":
+            coordinator.async_set_updated_data(
+                replace(core, status=replace(core.status, status="idle"))
+            )
+        elif outcome == "offline":
+            coordinator.async_set_update_error(DeviceException("Offline"))
+        elif outcome == "unload":
+            coordinator._cancel_details_refresh()
+        release.set()
+        await asyncio.gather(task, return_exceptions=outcome == "unload")
+        assert await asyncio.to_thread(returned.wait, 5)
+        if outcome == "complete":
+            assert coordinator.data.properties["texture"] == 1
+            assert coordinator.data.properties["recorded_temperature"] == 27
+            assert coordinator.data.properties["display_timeout"] == 5
+        elif outcome == "superseded":
+            assert coordinator.data.status.status == "idle"
+            assert not coordinator.cooking_active
+        elif outcome == "offline":
+            assert not coordinator.last_update_success
+        else:
+            assert task.cancelled() and coordinator.data is core
+    finally:
+        release.set()
+        coordinator._cancel_details_refresh()
+
+
+async def test_command_refresh_defers_details_until_followup(
+    make_coordinator, device, metadata
+):
+    coordinator = make_coordinator()
+    coordinator.api.fetch_data.side_effect = lambda **_: Cmc301Backend(
+        device, metadata
+    ).fetch_core_data()
+    async with coordinator._command_lock:
+        await coordinator._async_update_data()
+    assert coordinator._details_task is None
+    assert len(device.calls) == 1
 
 
 async def test_actions_exist_without_loaded_entries(hass, make_coordinator):

@@ -99,6 +99,57 @@ def test_feedback_units_partial_errors_and_history(device, metadata):
         backend.fetch_data()
 
 
+def test_core_snapshot_does_not_wait_for_optional_reads(device, metadata):
+    backend = Cmc301Backend(device, metadata)
+    device.values[2, 1] = 3
+    core = backend.fetch_core_data()
+    assert len(device.calls) == 1 and len(device.calls[0][1]) == 6
+    assert core.status.status == "scheduled" and core.status.remaining == 2
+    assert core.properties["recorded_temperature"] is None
+    assert core.properties["texture"] is None
+    original_send = device.send
+
+    def timeout(method, params, retry_count=None):
+        assert retry_count == 0
+        raise DeviceException("Optional read timeout")
+
+    device.send = timeout
+    for kind in ("properties", "history", "settings"):
+        core = backend.fetch_detail(core, kind)
+        assert core.status.status == "scheduled"
+    device.send = original_send
+    device.values[2, 1] = 1
+    assert backend.fetch_core_data().status.status == "idle"
+
+
+def test_optional_cache_expiry_context_change_and_setting_write(
+    device, metadata, monkeypatch
+):
+    clock = [0]
+    monkeypatch.setattr(
+        "custom_components.xiaomi_miio_cooker.cmc301.monotonic", lambda: clock[0]
+    )
+    backend = Cmc301Backend(device, metadata)
+    snapshot = backend.fetch_data()
+    count = len(device.calls)
+    snapshot = backend.fetch_detail(snapshot, "settings")
+    snapshot = backend.fetch_detail(snapshot, "history")
+    assert len(device.calls) == count
+    clock[0] = 121
+    snapshot = backend.fetch_detail(snapshot, "settings")
+    snapshot = backend.fetch_detail(snapshot, "history")
+    assert len(device.calls) == count + 2
+    backend.set_setting("panel_sleep", 8)
+    assert backend.fetch_core_data().properties["display_timeout"] == 8
+    device.values[2, 1] = 3
+    core = backend.fetch_core_data()
+    assert core.properties["recorded_temperature"] is None
+    assert core.properties["texture"] is None
+    count = len(device.calls)
+    backend.fetch_detail(snapshot, "history")  # Old idle read cannot enter new cycle.
+    assert len(device.calls) == count
+
+
 def test_start_stop_and_save_use_correct_actions(device, metadata):
     backend = Cmc301Backend(device, metadata)
     backend.start(RECIPES[0].profile)
