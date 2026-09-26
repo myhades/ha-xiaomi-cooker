@@ -141,6 +141,16 @@ class XiaomiMiioCookerCoordinator(DataUpdateCoordinator[CookerData]):
             if self.is_cmc301:
                 return self.data.properties.get("texture")
             stage = self.data.status.stage
+            if self.data.status.status == "scheduled":
+                # Plugin 10913 reads this byte directly as 0/1/2 for reservations;
+                # python-miio's running taste_phase divides it by 33 instead.
+                return (
+                    stage.taste
+                    if stage is not None
+                    and type(stage.taste) is int
+                    and stage.taste in (0, 1, 2)
+                    else None
+                )
             return stage.taste_phase if stage is not None else None
         return None
 

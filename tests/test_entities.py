@@ -35,20 +35,28 @@ from custom_components.xiaomi_miio_cooker.switch import (
 
 
 @pytest.mark.parametrize("cmc", [False, True])
+@pytest.mark.parametrize("state", ["running", "scheduled"])
 async def test_running_feedback_uses_sensors_and_disables_controls(
-    hass, make_coordinator, cmc
+    hass, make_coordinator, cmc, state
 ):
     coordinator = make_coordinator(cmc)
     entities = await setup_platforms(hass, coordinator)
     menu, taste, duration = entities["select"][:3]
     start = entities["button"][0]
     assert not start.available
-    stage = CookerStageData(None, None, 66, 2, None, None)
+    stage = CookerStageData(
+        None,
+        None,
+        2 if state == "scheduled" else 66,
+        0 if state == "scheduled" else 2,
+        None,
+        None,
+    )
     snapshot = replace(
         coordinator.data,
         status=replace(
             coordinator.data.status,
-            status="running",
+            status=state,
             menu=2 if cmc else 1,
             duration=63,
             stage=stage,
@@ -61,6 +69,15 @@ async def test_running_feedback_uses_sensors_and_disables_controls(
     sensors = {e.entity_description.key: e for e in entities["sensor"]}
     assert sensors["current_menu"].native_value == "jingzhu"
     assert sensors["current_taste"].native_value == "hard"
+    if not cmc and state == "scheduled":
+        coordinator.async_set_updated_data(
+            replace(
+                snapshot,
+                status=replace(snapshot.status, stage=replace(stage, taste=66)),
+            )
+        )
+        assert sensors["current_taste"].native_value is None
+        coordinator.async_set_updated_data(snapshot)
     assert sensors["current_duration"].native_value == 63
     coordinator.async_set_updated_data(
         replace(snapshot, status=replace(snapshot.status, menu=3))

@@ -333,7 +333,7 @@
         }
       },
       "completion_notification": {
-        "name": "完成推送"
+        "name": "完成通知"
       },
       "lid_open_warning": {
         "name": "开盖超时报警"

@@ -370,7 +370,7 @@ class XiaomiCookerSensor(XiaomiMiioCookerEntity, SensorEntity):
             if key == "current_duration":
                 return self.coordinator.displayed_duration
             menu = self.coordinator.displayed_menu
-            if menu != "jingzhu" or data.status.status != "running":
+            if menu != "jingzhu" or data.status.status not in {"running", "scheduled"}:
                 return None
             return {0: "soft", 1: "middle", 2: "hard"}.get(
                 self.coordinator.displayed_parameter("taste")

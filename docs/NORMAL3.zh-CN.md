@@ -63,3 +63,5 @@
 精煮、快煮、煮粥、cooking、sweet_rice、brown_rice、soup 的当前模板支持预约；保温、蛋糕、酸奶、再加热不支持。UI 控件与 start_recipe 服务共用校验与编码。原版插件编码对比及异常路径使用离线测试；实机预约接受、倒计时和取消仍待验证，本轮未启动设备。
 
 预约反馈沿用插件 11030 的 renderPreparing：t_precook 是完成钟表时刻，不是依赖库说明中的等待分钟数。预约期间 Remaining time 用此值与 HA 本地时钟换算，支持跨午夜以及插件识别的次日值；无有效时刻或跨夏令时歧义则为 unknown。它不依赖从 HA 发起预约，因此也适用于面板和米家启动的预约。Current duration 仍是 t_cook 的烹饪时长，未将其冒充最初预约总时长。
+
+精煮口感反馈也适用于预约：插件 11030 将 stage 传给预约曲线，10913 的 getTaste 直接读取第 6–7 个十六进制字符并映射 0/1/2。集成在 scheduled 状态使用该枚举，未使用运行中 taste_phase 的除以 33 换算；缺失或其他值显示 unknown。

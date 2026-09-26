@@ -21,7 +21,7 @@
 | Lid-open keep-warm timeout | select | — | ✓ | 2/4/6/8/10 分钟；待机且读回有效时可用。 |
 | Status | enum sensor | ✓ | ✓ | 两边均有待机、烹饪、保温、自动保温、预约、故障；`keep_warm` 表示手动保温，`automatic_keep_warm` 表示煮后自动保温。CMC301 另有升级、完成；normal3 其他历史过程值仍归入 `busy`，未识别值或无法区分来源的保温为 `unknown`。 |
 | Current menu | enum sensor | ✓ | ✓ | 活动期间显示设备读回食谱；不识别的 ID 为 `other`，待机为 `unknown`。两边都不是“准备开始”的菜单选择。 |
-| Fine rice taste（精煮口感） | enum sensor | ✓ | ✓ | 仅精煮饭烹饪中显示 `soft/middle/hard`；其他菜单、保温、预约、待机及缺失反馈均为 `unknown`。CMC301 来自 texture 属性，normal3 来自 stage 中的口感字段。 |
+| Fine rice taste（精煮口感） | enum sensor | ✓ | ✓ | 仅精煮饭烹饪或预约中显示设备反馈的 `soft/middle/hard`；其他菜单、保温、待机及缺失反馈均为 `unknown`。CMC301 来自 texture 属性，normal3 来自 stage 中的口感字段。 |
 | Current duration | duration sensor | ✓ | ✓ | 当前阶段总时长，整数分钟：烹饪/预约为设备读回烹饪时长；手动保温为设备读回设定时长；自动保温为两份插件定义的 1440 分钟上限。待机、无效值或保温来源未知时为 `unknown`，不使用准备参数补值。 |
 | Remaining time | duration sensor | ✓ | ✓ | 整数分钟；烹饪/预约为剩余时间，保温为已保温时间。属性 `time_direction` 分别为 `remaining/elapsed`。CMC301 剩余时间向上取整、已保温时间向下取整；normal3 烹饪和保温保留设备的分钟反馈；预约时将 t_precook 完成时刻按 HA 时区换算为距离完成的整数分钟（向上取整），不依赖启动来源或 HA 准备参数，缺失或夏令时歧义时显示 unknown。 |
 | Cooking finished | event | ✓ | ✓ | 一次可观察到的烹饪完成产生一次 `finished` 事件；实体状态为最后事件时间，属性包含 `event_type`、`recipe` 和 `keep_warm_type`。手动保温结束不算烹饪完成。 |
