@@ -25,7 +25,7 @@ from .api import (
     build_unique_id,
     normalize_token,
 )
-from .const import CONF_MODEL, DOMAIN, MODEL_AUTO, SUPPORTED_MODELS
+from .const import CONF_MODEL, DOMAIN, SUPPORTED_MODELS
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -59,47 +59,22 @@ async def _async_validate_input(
     data: dict[str, Any],
 ) -> dict[str, str | None]:
     """Validate the user input allows us to connect."""
-    selected_model = data.get(CONF_MODEL) or MODEL_AUTO
-    configured_model = None if selected_model == MODEL_AUTO else selected_model
-    api = XiaomiMiioCookerApi(
-        host=data[CONF_HOST],
-        token=data[CONF_TOKEN],
-        model=configured_model,
-    )
-
-    metadata = None
-    if configured_model is None:
-        try:
-            metadata = await hass.async_add_executor_job(api.fetch_device_info)
-        except DeviceException as err:
-            _log_connection_failure("miIO.info", err, data[CONF_TOKEN])
-            raise CannotConnect from err
-
-        if not metadata.model:
-            raise CannotDetectModel
-
-        if metadata.model not in SUPPORTED_MODELS:
-            raise UnsupportedModelError(f"Unsupported device found: {metadata.model}")
-
+    api = XiaomiMiioCookerApi(host=data[CONF_HOST], token=data[CONF_TOKEN], model=None)
     try:
-        if configured_model is None:
-            initial_data = await hass.async_add_executor_job(api.fetch_data)
-        else:
-            initial_data = await hass.async_add_executor_job(api.validate)
-    except UnsupportedModelError as err:
-        raise UnsupportedModelError from err
+        metadata = await hass.async_add_executor_job(api.fetch_device_info)
     except DeviceException as err:
-        _log_connection_failure(
-            "initial status read" if configured_model is None else "device validation",
-            err,
-            data[CONF_TOKEN],
-        )
+        _log_connection_failure("miIO.info", err, data[CONF_TOKEN])
         raise CannotConnect from err
-
-    metadata = metadata or initial_data.device_info
-    resolved_model = configured_model or metadata.model
-    if not resolved_model:
+    if not metadata.model:
         raise CannotDetectModel
+    if metadata.model not in SUPPORTED_MODELS:
+        raise UnsupportedModelError(f"Unsupported device found: {metadata.model}")
+    try:
+        await hass.async_add_executor_job(api.fetch_data)
+    except DeviceException as err:
+        _log_connection_failure("initial status read", err, data[CONF_TOKEN])
+        raise CannotConnect from err
+    resolved_model = metadata.model
 
     return {
         "title": build_entry_title(),
@@ -150,6 +125,7 @@ class XiaomiMiioCookerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 else:
                     await self.async_set_unique_id(info["unique_id"])
                     self._abort_if_unique_id_mismatch(reason="wrong_device")
+                    data[CONF_MODEL] = info["model"]
                     return self.async_update_reload_and_abort(entry, data_updates=data)
 
         return self.async_show_form(
@@ -219,19 +195,11 @@ class XiaomiMiioCookerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     def _build_schema(user_input: dict[str, Any] | None = None) -> vol.Schema:
         """Build the config flow schema."""
         user_input = user_input or {}
-        model_options = {
-            MODEL_AUTO: "Auto",
-            **{model: model for model in SUPPORTED_MODELS},
-        }
         schema: dict = {
             vol.Required(CONF_HOST, default=user_input.get(CONF_HOST, "")): str,
             vol.Required(CONF_TOKEN): TextSelector(
                 TextSelectorConfig(type=TextSelectorType.PASSWORD)
             ),
-            vol.Required(
-                CONF_MODEL,
-                default=user_input.get(CONF_MODEL) or MODEL_AUTO,
-            ): vol.In(model_options),
         }
 
         return vol.Schema(schema)

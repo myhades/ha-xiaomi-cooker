@@ -5,8 +5,7 @@
         "title": "设置 Xiaomi Cooker",
         "data": {
           "host": "IP 地址",
-          "token": "令牌",
-          "model": "型号"
+          "token": "令牌"
         }
       },
       "reconfigure": {

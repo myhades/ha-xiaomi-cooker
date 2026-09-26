@@ -5,8 +5,7 @@
         "title": "Xiaomi Cooker einrichten",
         "data": {
           "host": "IP-Adresse",
-          "token": "Token",
-          "model": "Modell"
+          "token": "Token"
         }
       },
       "reconfigure": {

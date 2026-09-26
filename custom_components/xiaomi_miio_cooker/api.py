@@ -60,7 +60,7 @@ class XiaomiMiioCookerApi:
             if info is None:
                 raise DeviceException("No device information returned")
             self._device_info = CookerDeviceMetadata(
-                model=getattr(info, "model", None) or self.configured_model,
+                model=getattr(info, "model", None),
                 firmware_version=getattr(info, "firmware_version", None),
                 hardware_version=getattr(info, "hardware_version", None),
                 mac_address=normalize_mac(
@@ -71,14 +71,12 @@ class XiaomiMiioCookerApi:
 
     def _get_backend(self) -> CookerBackend:
         metadata = self._get_device_info()
-        model = self.configured_model or metadata.model
+        model = metadata.model
         if model not in SUPPORTED_MODELS:
             raise UnsupportedModelError(f"Unsupported device: {model}")
-        if (
-            model == MODEL_CMC301 or metadata.model == MODEL_CMC301
-        ) and model != metadata.model:
+        if self.configured_model is not None and self.configured_model != model:
             raise UnsupportedModelError(
-                "Configured and discovered cooker protocols differ"
+                "Configured and discovered cooker models differ"
             )
         if self._backend is None:
             if model == MODEL_CMC301:

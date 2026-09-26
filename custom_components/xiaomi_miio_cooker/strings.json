@@ -5,8 +5,7 @@
         "title": "Set up Xiaomi Cooker",
         "data": {
           "host": "IP address",
-          "token": "Token",
-          "model": "Model"
+          "token": "Token"
         }
       },
       "reconfigure": {

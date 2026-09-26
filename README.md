@@ -41,7 +41,7 @@ To add the integration, navigate to `Settings > Devices & services > Add integra
 
 [![Add Xiaomi Cooker to Home Assistant.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=xiaomi_miio_cooker)
 
-Enter the cooker IP address and token, then select its model or use automatic detection. To change the IP address or token later, select **Reconfigure** from the integration menu. Leave the token blank to keep its current value. The integration verifies the cooker identity before saving changes, preserving existing entities.
+Enter the cooker IP address and token. The model is detected automatically; only `xiaomi.cooker.cmc301` and `chunmi.cooker.normal3` are accepted. To change the IP address or token later, select **Reconfigure** from the integration menu. Leave the token blank to keep its current value. The integration verifies the cooker identity before saving changes, preserving existing entities.
 
 ## Cooking
 

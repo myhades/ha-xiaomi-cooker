@@ -9,7 +9,6 @@ from homeassistant.const import Platform
 DOMAIN = "xiaomi_miio_cooker"
 
 CONF_MODEL = "model"
-MODEL_AUTO = "auto"
 
 ATTR_PROFILE = "profile"
 
@@ -33,16 +32,7 @@ MODEL_NORMAL5 = "chunmi.cooker.normal5"
 
 MODEL_CMC301 = "xiaomi.cooker.cmc301"
 
-SUPPORTED_MODELS = (
-    MODEL_CMC301,
-    MODEL_PRESSURE1,
-    MODEL_PRESSURE2,
-    MODEL_NORMAL1,
-    MODEL_NORMAL2,
-    MODEL_NORMAL3,
-    MODEL_NORMAL4,
-    MODEL_NORMAL5,
-)
+SUPPORTED_MODELS = (MODEL_CMC301, MODEL_NORMAL3)
 
 PLATFORMS = [
     Platform.SENSOR,

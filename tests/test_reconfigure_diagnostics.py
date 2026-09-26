@@ -182,3 +182,38 @@ async def test_recipe_error_has_translated_range(make_coordinator):
         coordinator.prepare_recipe("kuaizhu", {"duration": 99})
     assert caught.value.translation_key == "duration_out_of_range"
     assert caught.value.translation_placeholders == {"minimum": "28", "maximum": "28"}
+
+
+@pytest.mark.parametrize(
+    "model",
+    ["xiaomi.cooker.cmc301", "chunmi.cooker.normal3", "chunmi.cooker.normal4", None],
+)
+async def test_detection_uses_device_identity_and_rejects_other_models(
+    hass, monkeypatch, model
+):
+    api = Mock()
+    api.fetch_device_info.return_value = SimpleNamespace(
+        model=model, mac_address="aa:bb:cc:dd:ee:ff"
+    )
+    factory = Mock(return_value=api)
+    monkeypatch.setattr(config_flow, "XiaomiMiioCookerApi", factory)
+    data = {"host": "192.0.2.1", "token": "a" * 32, "model": "xiaomi.cooker.cmc301"}
+    if model in ("xiaomi.cooker.cmc301", "chunmi.cooker.normal3"):
+        result = await config_flow._async_validate_input(hass, data)
+        assert result["model"] == model
+        api.fetch_data.assert_called_once()
+    else:
+        error = (
+            config_flow.CannotDetectModel
+            if model is None
+            else config_flow.UnsupportedModelError
+        )
+        with pytest.raises(error):
+            await config_flow._async_validate_input(hass, data)
+        api.fetch_data.assert_not_called()
+    assert factory.call_args.kwargs["model"] is None
+
+
+def test_setup_schema_has_only_connection_fields():
+    schema = config_flow.XiaomiMiioCookerConfigFlow._build_schema()
+    assert {str(key) for key in schema.schema} == {"host", "token"}
