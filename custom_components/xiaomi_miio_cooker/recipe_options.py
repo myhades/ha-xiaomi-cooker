@@ -13,6 +13,15 @@ class RecipeOptions:
     finish_in: int = 0
 
 
+@dataclass(frozen=True)
+class ScheduledRecipe:
+    """A relative normal3 request; resolve its clock time just before sending."""
+
+    profile: str
+    finish_in: int
+    time_zone: str
+
+
 def duration_choices(minimum: int, maximum: int, default: int) -> list[int]:
     """Keep template endpoints/default, with five or ten minute grid points."""
     if not 1 <= minimum <= default <= maximum <= 1440:

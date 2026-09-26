@@ -6,8 +6,10 @@ import logging
 import re
 from binascii import crc_hqx
 from dataclasses import replace
+from datetime import datetime, timedelta
 from time import monotonic
 from typing import Any
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from miio import Cooker, DeviceException
 
@@ -21,7 +23,7 @@ from .models import (
     CookerStageData,
     CookerStatusData,
 )
-from .recipe_options import RecipeOptions
+from .recipe_options import RecipeOptions, ScheduledRecipe
 from .stages import history_payload, rice_history_stage
 
 
@@ -81,11 +83,14 @@ def supports_option(profile: str, key: str) -> bool:
         "duration": True,
         "auto_keep_warm": bool(data[2] & 0x20),
         "taste": int.from_bytes(data[:2], "big") == 1,
+        "finish_in": bool(data[2] & 0x40),
     }.get(key, False)
 
 
-def encode_profile(profile: str, options: RecipeOptions) -> str:
-    """Preserve program bytes and legacy defaults; do not invent scheduling."""
+def encode_profile(
+    profile: str, options: RecipeOptions, *, now: datetime | None = None
+) -> str:
+    """Encode the official header; scheduling uses an explicit local clock."""
     original = decode_profile(profile)
     minimum, maximum = duration_range(profile)
     defaults = default_options(profile)
@@ -112,20 +117,56 @@ def encode_profile(profile: str, options: RecipeOptions) -> str:
         raise RecipeValidationError(
             "taste_unsupported", "Only fine rice supports taste adjustment"
         )
-    if type(options.finish_in) is not int or options.finish_in != 0:
+    if type(options.finish_in) is not int or not 0 <= options.finish_in <= 1439:
+        raise RecipeValidationError("invalid_finish_in", "Invalid scheduled duration")
+    if options.finish_in and not supports_option(profile, "finish_in"):
         raise RecipeValidationError(
-            "schedule_unsupported",
-            "Scheduled recipe preparation is not supported for normal3",
+            "schedule_unsupported", "This recipe does not support scheduling"
         )
-    if options == defaults:
+    target = None
+    if options.finish_in:
+        # Add one minute to the minimum because the wire clock omits seconds.
+        if options.finish_in <= options.duration:
+            raise RecipeValidationError(
+                "finish_too_soon",
+                "Scheduled duration must exceed cooking time",
+                minimum=options.duration,
+            )
+        if now is None or now.utcoffset() is None:
+            raise RecipeValidationError("schedule_time_zone", "Local clock required")
+        target = now + timedelta(minutes=options.finish_in)
+        if (
+            now.utcoffset() != target.utcoffset()
+            or now.replace(fold=0).utcoffset() != now.replace(fold=1).utcoffset()
+            or target.replace(fold=0).utcoffset() != target.replace(fold=1).utcoffset()
+        ):
+            raise RecipeValidationError(
+                "schedule_clock_change", "Scheduling across a clock change is ambiguous"
+            )
+    if options == defaults and not original[9] & 0x80:
         return profile
     data = bytearray(original)
     data[3:5] = bytes(divmod(options.duration, 60))
     data[10] = (data[10] & 0x7F) | (0x80 if options.auto_keep_warm else 0)
     if supports_option(profile, "taste"):
         data[7] = options.taste
+    if target is not None:
+        data[9] = 0x80 | target.hour
+        data[10] = (data[10] & 0x80) | target.minute
+    else:
+        data[9] &= 0x7F
     data[-2:] = crc_hqx(data[:-2], 0).to_bytes(2, "big")
     return data.hex()
+
+
+def schedule_local_now(time_zone: str) -> datetime:
+    """Use HA's configured zone, never the host OS timezone."""
+    try:
+        return datetime.now(ZoneInfo(time_zone))
+    except (ZoneInfoNotFoundError, ValueError, TypeError) as err:
+        raise RecipeValidationError(
+            "schedule_time_zone", "A valid Home Assistant timezone is required"
+        ) from err
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -508,6 +549,25 @@ class Normal3Backend:
         finally:
             if self.metadata.model == MODEL_NORMAL3:
                 self._invalidate_history()
+
+    def start_scheduled(self, request: ScheduledRecipe) -> Any:
+        """Check idle, resolve the finish clock, and send exactly once."""
+        if type(request.finish_in) is not int or not 1 <= request.finish_in <= 1439:
+            raise RecipeValidationError(
+                "invalid_finish_in", "Invalid scheduled duration"
+            )
+        self._idle_snapshot()
+        options = replace(default_options(request.profile), finish_in=request.finish_in)
+        profile = encode_profile(
+            request.profile, options, now=schedule_local_now(request.time_zone)
+        )
+        try:
+            result = self._cooker.send("set_start", [profile], retry_count=0)
+            if result != ["ok"]:
+                raise CookerCommandError("start_unconfirmed", "Uncertain start result")
+            return result
+        finally:
+            self._invalidate_history()
 
     def stop(self) -> Any:
         """Stop the current cooking process."""

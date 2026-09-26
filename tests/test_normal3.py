@@ -1,13 +1,16 @@
 """normal3 protocol, non-heating settings and model isolation."""
 
 from binascii import crc_hqx
+from datetime import datetime
 from types import SimpleNamespace
 from unittest.mock import Mock
+from zoneinfo import ZoneInfo
 
 import pytest
 from miio import DeviceException
 from miio.cooker import TemperatureHistory
 
+from custom_components.xiaomi_miio_cooker import normal3
 from custom_components.xiaomi_miio_cooker.api import (
     UnsupportedModelError,
     XiaomiMiioCookerApi,
@@ -22,6 +25,7 @@ from custom_components.xiaomi_miio_cooker.normal3 import (
     panel_profile,
 )
 from custom_components.xiaomi_miio_cooker.profiles import get_profiles_for_model
+from custom_components.xiaomi_miio_cooker.recipe_options import ScheduledRecipe
 
 
 def make_normal3():
@@ -44,6 +48,52 @@ def test_normal3_wire_start_stop_unchanged():
     backend._cooker.send.assert_called_with("set_start", [profile])
     backend.stop()
     backend._cooker.send.assert_called_with("set_func", ["end02"])
+
+
+@pytest.mark.parametrize("result", [["ok"], ["error"], DeviceException("timeout")])
+def test_scheduled_start_uses_fresh_local_clock_and_never_retries(monkeypatch, result):
+    backend = make_normal3()
+    backend._cooker.status = Mock(
+        return_value=SimpleNamespace(data={"func": "waiting"})
+    )
+
+    def clock(zone):
+        backend._cooker.status.assert_called_once()
+        assert zone == "Asia/Shanghai"
+        return datetime(2026, 9, 27, 23, 59, tzinfo=ZoneInfo(zone))
+
+    monkeypatch.setattr(normal3, "schedule_local_now", clock)
+    backend._cooker.send = Mock(
+        side_effect=result if isinstance(result, Exception) else None,
+        return_value=result,
+    )
+    profile = next(
+        r.profile for r in get_profiles_for_model(MODEL_NORMAL3) if r.key == "jingzhu"
+    )
+    request = ScheduledRecipe(profile, 720, "Asia/Shanghai")
+    if result == ["ok"]:
+        assert backend.start_scheduled(request) == ["ok"]
+    else:
+        with pytest.raises(DeviceException):
+            backend.start_scheduled(request)
+    backend._cooker.send.assert_called_once()
+    args, kwargs = backend._cooker.send.call_args
+    assert args[0] == "set_start" and kwargs == {"retry_count": 0}
+    raw = normal3.decode_profile(args[1][0])
+    assert raw[9] == 0x80 | 11 and raw[10] & 0x7F == 59
+
+
+def test_scheduled_start_refuses_busy_device_and_invalid_request():
+    backend = make_normal3()
+    backend._cooker.status = Mock(
+        return_value=SimpleNamespace(data={"func": "running"})
+    )
+    profile = get_profiles_for_model(MODEL_NORMAL3)[0].profile
+    with pytest.raises(DeviceException, match="idle"):
+        backend.start_scheduled(ScheduledRecipe(profile, 720, "Asia/Shanghai"))
+    with pytest.raises(ValueError):
+        backend.start_scheduled(ScheduledRecipe(profile, 0, "Asia/Shanghai"))
+    backend._cooker.send.assert_not_called()
 
 
 @pytest.mark.parametrize(

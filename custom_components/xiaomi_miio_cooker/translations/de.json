@@ -385,7 +385,7 @@
     },
     "start_recipe": {
       "name": "Rezept starten",
-      "description": "Ein integriertes Rezept mit Einstellungen starten. Die Zeitplanung ist nur für CMC301 verfügbar.",
+      "description": "Ein integriertes CMC301- oder normal3-Rezept mit Einstellungen starten; geeignete Rezepte unterstützen die Zeitplanung.",
       "fields": {
         "device_id": {
           "name": "Gerät"
@@ -493,6 +493,12 @@
     },
     "not_cooking": {
       "message": "Es ist kein Koch- oder Warmhaltevorgang aktiv."
+    },
+    "schedule_time_zone": {
+      "message": "Vor der Zeitplanung eine gültige Home-Assistant-Zeitzone einstellen."
+    },
+    "schedule_clock_change": {
+      "message": "Zeitplanung über eine Zeitumstellung hinweg wird nicht unterstützt. Eine Fertigstellung vor der Umstellung wählen oder danach starten."
     }
   }
 }

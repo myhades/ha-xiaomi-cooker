@@ -1,4 +1,4 @@
-"""CMC301 scheduled completion and display settings."""
+"""Scheduled completion controls shared by both cookers."""
 
 from homeassistant.components.number import NumberEntity, NumberMode
 from homeassistant.const import UnitOfTime
@@ -19,11 +19,10 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     coordinator = entry.runtime_data
-    if coordinator.is_cmc301:
-        async_add_entities(Cmc301Number(coordinator, key) for key in ("finish_in",))
+    async_add_entities([ScheduledDurationNumber(coordinator, "finish_in")])
 
 
-class Cmc301Number(CookerPropertyEntity, NumberEntity):
+class ScheduledDurationNumber(CookerPropertyEntity, NumberEntity):
     _attr_native_step = 1
     _attr_native_unit_of_measurement = UnitOfTime.MINUTES
     _attr_mode = NumberMode.BOX

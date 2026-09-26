@@ -17,7 +17,7 @@ start:
         text:
 start_recipe:
   name: Start a recipe
-  description: Start a bundled CMC301 or normal3 recipe with parameters. Scheduled completion is supported only on CMC301.
+  description: Start a bundled CMC301 or normal3 recipe with parameters, including scheduled completion on supported recipes.
   fields:
     device_id:
       name: Device

@@ -385,7 +385,7 @@
     },
     "start_recipe": {
       "name": "Start a recipe",
-      "description": "Start a bundled CMC301 or normal3 recipe with parameters. Scheduled completion is supported only on CMC301.",
+      "description": "Start a bundled CMC301 or normal3 recipe with parameters, including scheduled completion on supported recipes.",
       "fields": {
         "device_id": {
           "name": "Device"
@@ -493,6 +493,12 @@
     },
     "not_cooking": {
       "message": "No cooking session is active."
+    },
+    "schedule_time_zone": {
+      "message": "Set a valid Home Assistant time zone before scheduling."
+    },
+    "schedule_clock_change": {
+      "message": "Scheduling across a daylight saving time change is not supported. Choose a completion time before the change or start after it."
     }
   }
 }

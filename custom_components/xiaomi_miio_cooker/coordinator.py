@@ -26,7 +26,7 @@ from .const import (
 from .contracts import RecipeCodec
 from .errors import command_error, recipe_error, validation_error
 from .profiles import CookingProfile, get_cmc301_menu_key, get_menu_key
-from .recipe_options import RecipeOptions, duration_choices
+from .recipe_options import RecipeOptions, ScheduledRecipe, duration_choices
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -169,7 +169,7 @@ class XiaomiMiioCookerCoordinator(DataUpdateCoordinator[CookerData]):
             raise validation_error("unsupported_option")
         candidate = replace(self.recipe_options, **{key: value})
         try:
-            self.recipe_codec.encode_profile(self.selected_recipe.profile, candidate)
+            self._prepare_profile(self.selected_recipe.profile, candidate)
         except ValueError as err:
             raise recipe_error(err) from err
         self.recipe_options = candidate
@@ -278,17 +278,34 @@ class XiaomiMiioCookerCoordinator(DataUpdateCoordinator[CookerData]):
         except DeviceException as err:
             raise UpdateFailed(f"Unable to update Xiaomi cooker state: {err}") from err
 
-    async def async_start(self, profile: str) -> None:
+    async def async_start(self, profile: str | ScheduledRecipe) -> None:
         """Start a cooking profile."""
         await self._async_execute_command(self.api.start, profile)
 
-    def prepare_recipe(self, recipe: str, options: dict) -> str:
+    def _prepare_profile(
+        self, profile: str, options: RecipeOptions
+    ) -> str | ScheduledRecipe:
+        if not self.is_cmc301 and options.finish_in:
+            time_zone = self.hass.config.time_zone
+            # Preflight now; the backend repeats this with a fresh clock after
+            # acquiring the device lock and checking the cooker is still idle.
+            normal3.encode_profile(
+                profile, options, now=normal3.schedule_local_now(time_zone)
+            )
+            return ScheduledRecipe(
+                normal3.encode_profile(profile, replace(options, finish_in=0)),
+                options.finish_in,
+                time_zone,
+            )
+        return self.recipe_codec.encode_profile(profile, options)
+
+    def prepare_recipe(self, recipe: str, options: dict) -> str | ScheduledRecipe:
         """Build an atomic automation request without changing the UI draft."""
         if self.recipe_codec is None or recipe not in self._profiles_by_key:
             raise validation_error("unsupported_recipe")
         profile = self._profiles_by_key[recipe].profile
         try:
-            return self.recipe_codec.encode_profile(
+            return self._prepare_profile(
                 profile, replace(self.recipe_codec.default_options(profile), **options)
             )
         except (ValueError, TypeError) as err:
@@ -341,12 +358,10 @@ class XiaomiMiioCookerCoordinator(DataUpdateCoordinator[CookerData]):
             profile = self.selected_recipe.profile
             if self.recipe_options is not None:
                 try:
-                    profile = self.recipe_codec.encode_profile(
-                        profile, self.recipe_options
-                    )
+                    profile = self._prepare_profile(profile, self.recipe_options)
                 except ValueError as err:
                     raise recipe_error(err) from err
-            if self.is_cmc301:
+            if self.is_cmc301 or isinstance(profile, ScheduledRecipe):
                 # A lost response must not leave a one-click repeat armed.
                 self._clear_cooking_selection(revision)
             await self._run_command(self.api.start, profile)

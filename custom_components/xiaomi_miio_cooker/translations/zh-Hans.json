@@ -385,7 +385,7 @@
     },
     "start_recipe": {
       "name": "启动食谱",
-      "description": "一次提交 CMC301 或 normal3 菜单和参数；预约仅支持 CMC301。",
+      "description": "一次提交 CMC301 或 normal3 菜单和参数；支持预约的食谱可设置预约时长。",
       "fields": {
         "device_id": {
           "name": "设备"
@@ -493,6 +493,12 @@
     },
     "not_cooking": {
       "message": "电饭煲当前没有进行烹饪或保温。"
+    },
+    "schedule_time_zone": {
+      "message": "预约前请设置有效的 Home Assistant 时区。"
+    },
+    "schedule_clock_change": {
+      "message": "不支持跨夏令时切换预约。请选择切换前的完成时间，或在切换后启动预约。"
     }
   }
 }

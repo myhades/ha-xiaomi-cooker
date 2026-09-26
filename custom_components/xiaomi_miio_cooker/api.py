@@ -21,6 +21,7 @@ from .models import (
 from .models import (
     build_unique_id as build_unique_id,
 )
+from .recipe_options import ScheduledRecipe
 
 
 class UnsupportedModelError(Exception):
@@ -106,9 +107,15 @@ class XiaomiMiioCookerApi:
         elif len(profile) == 352:
             raise ValueError("A CMC301 recipe cannot be sent to a legacy cooker")
 
-    def start(self, profile: str) -> Any:
+    def start(self, profile: str | ScheduledRecipe) -> Any:
         with self._lock:
             backend = self._get_backend()
+            if isinstance(profile, ScheduledRecipe):
+                from .normal3 import Normal3Backend
+
+                if not isinstance(backend, Normal3Backend):
+                    raise ValueError("Clock-based schedules require normal3")
+                return backend.start_scheduled(profile)
             self.validate_profile(profile)
             return backend.start(profile)
 

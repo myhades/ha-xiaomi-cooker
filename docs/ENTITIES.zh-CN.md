@@ -1,6 +1,6 @@
 # 实体对照
 
-以下对应 main 分支实现，包含尚未发布的修改。CMC301 共 22 个实体，normal3 共 20 个实体。
+以下对应 main 分支实现，包含尚未发布的修改。CMC301 共 22 个实体，normal3 共 21 个实体。
 
 所有实体都依赖集成已加载且设备更新成功。表中“—”表示当前集成不提供该实体，不等于硬件绝对没有这项能力。“活动期间”包括烹饪、预约及保温；读不到数据时传感器为 `unknown`，控制条件不满足时控件为 `unavailable`。
 
@@ -12,7 +12,7 @@
 | Fine rice taste（精煮口感） | select | ✓ | ✓ | `soft/middle/hard`；选中精煮饭时默认 `middle`，仅尚未开始时可用，其余情况不可用。 |
 | Duration | select | ✓ | ✓ | 已选食谱且非活动期间可用；字符串分钟数，例如 `"25"`；按食谱范围生成 5/10 分钟步进及边界值，固定时长只有一个选项。选食谱时自动选默认时长。 |
 | Automatic keep warm | switch | ✓ | ✓ | 开始前仅支持此选项的食谱可用。活动期间两边都不可用；normal3 非待机也不可用，其实际设置仍在内部读取，不以可操作开关呈现。 |
-| Scheduled duration | number | ✓ | — | 支持预约的食谱、非活动期间；0–1439 分钟整数，0 为立即开始，其他值还须符合食谱限制。 |
+| Scheduled duration | number | ✓ | ✓ | 支持预约的食谱、非活动期间；0–1439 分钟整数，0 为立即开始，其他值还须符合食谱限制。 |
 | Custom recipe | select | 13 个候选 | 7 个扩展食谱候选 | 仅待机时可修改，不会开始加热。CMC301 从自选模式读回并在本次加载期间记忆；normal3 独立读取收藏槽。未知为 `unknown`；读到不包含的食谱为 `other`，不能主动选择 `other`。 |
 | Panel auto off | select | `off`、2–10 | `off`、5–10 | 数字是分钟、间隔 1 分钟；读回有效设置才可用。normal3 还要求待机。 |
 | Panel recipe lights | select | ✓ | — | `selected/all`，显示 Selected/All（当前选择/全部）；读取设备实际值，读回未知时不可用。替换旧 Panel mode lights 开关。 |

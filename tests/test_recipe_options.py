@@ -2,8 +2,10 @@
 
 from binascii import crc_hqx
 from dataclasses import replace
+from datetime import datetime
 from types import SimpleNamespace
 from unittest.mock import Mock
+from zoneinfo import ZoneInfo
 
 import pytest
 from homeassistant.exceptions import HomeAssistantError
@@ -18,7 +20,10 @@ from custom_components.xiaomi_miio_cooker import (
 )
 from custom_components.xiaomi_miio_cooker.const import MODEL_NORMAL3
 from custom_components.xiaomi_miio_cooker.profiles import get_profiles_for_model
-from custom_components.xiaomi_miio_cooker.recipe_options import duration_choices
+from custom_components.xiaomi_miio_cooker.recipe_options import (
+    ScheduledRecipe,
+    duration_choices,
+)
 
 RECIPES = {r.key: r.profile for r in get_profiles_for_model(MODEL_NORMAL3)}
 
@@ -186,8 +191,84 @@ async def test_normal3_controls_change_only_supported_header(hass, make_coordina
         "zhuzhou", {"duration": 130, "auto_keep_warm": False}
     )
     assert codec.decode_profile(sent)[3:5] == bytes([2, 10])
+    request = coordinator.prepare_recipe("zhuzhou", {"duration": 130, "finish_in": 180})
+    assert isinstance(request, ScheduledRecipe)
+    assert request.finish_in == 180 and request.time_zone == hass.config.time_zone
+    assert codec.default_options(request.profile).duration == 130
     with pytest.raises(HomeAssistantError, match="schedule_unsupported"):
-        coordinator.prepare_recipe("zhuzhou", {"finish_in": 180})
+        coordinator.prepare_recipe("baowen", {"finish_in": 180})
+
+
+def test_normal3_schedule_headers_and_cancel():
+    supported = {
+        "jingzhu",
+        "kuaizhu",
+        "zhuzhou",
+        "cooking",
+        "sweet_rice",
+        "brown_rice",
+        "soup",
+    }
+    now = datetime(2026, 9, 27, 23, 59, tzinfo=ZoneInfo("Asia/Shanghai"))
+    for key, profile in RECIPES.items():
+        assert codec.supports_option(profile, "finish_in") == (key in supported)
+        if key not in supported:
+            continue
+        for warm in (False, True):
+            options = replace(
+                codec.default_options(profile), finish_in=720, auto_keep_warm=warm
+            )
+            encoded = codec.encode_profile(profile, options, now=now)
+            raw = codec.decode_profile(encoded)
+            assert raw[9:11] == bytes([0x80 | 11, (0x80 if warm else 0) | 59])
+            assert raw[:9] == bytes.fromhex(profile)[:9]
+            assert raw[11:-2] == bytes.fromhex(profile)[11:-2]
+            cancelled = codec.decode_profile(
+                codec.encode_profile(encoded, replace(options, finish_in=0))
+            )
+            assert not cancelled[9] & 0x80
+            assert bool(cancelled[10] & 0x80) == warm
+
+
+@pytest.mark.parametrize("finish", [True, -1, 60, 1440])
+def test_normal3_schedule_rejects_invalid_finish(finish):
+    profile = RECIPES["jingzhu"]
+    with pytest.raises(ValueError):
+        codec.encode_profile(
+            profile,
+            replace(codec.default_options(profile), finish_in=finish),
+            now=datetime(2026, 9, 27, tzinfo=ZoneInfo("Asia/Shanghai")),
+        )
+
+
+@pytest.mark.parametrize("month,day,hour", [(3, 29, 0), (10, 25, 0), (10, 25, 2)])
+def test_normal3_schedule_rejects_clock_changes(month, day, hour):
+    profile = RECIPES["jingzhu"]
+    with pytest.raises(ValueError, match="clock change"):
+        codec.encode_profile(
+            profile,
+            replace(codec.default_options(profile), finish_in=240),
+            now=datetime(2026, month, day, hour, tzinfo=ZoneInfo("Europe/Berlin")),
+        )
+
+
+async def test_normal3_schedule_control_and_uncertain_start(hass, make_coordinator):
+    coordinator = make_coordinator(False)
+    entities = await setup_platforms(hass, coordinator)
+    control = entities["number"][0]
+    assert not control.available
+    await coordinator.async_select_cooking_menu("zhuzhou")
+    assert control.available and control.native_value == 0
+    await control.async_set_native_value(180)
+    coordinator.api.start.side_effect = DeviceException("timeout")
+    with pytest.raises(HomeAssistantError):
+        await coordinator.async_start_selected_profile()
+    assert isinstance(coordinator.api.start.call_args.args[0], ScheduledRecipe)
+    assert coordinator.selected_recipe is None and not control.available
+    await coordinator.async_select_cooking_menu("refan")
+    assert not control.available
+    await coordinator.async_select_cooking_menu("zhuzhou")
+    assert control.native_value == 0
 
 
 @pytest.mark.parametrize("same_entry", [False, True])

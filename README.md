@@ -47,7 +47,7 @@ Enter the cooker IP address and token. The model is detected automatically; only
 
 Select a **Cooking menu** first. **Not selected** clears the preparation and disables the start button. The duration selector automatically chooses that recipe's default duration, and the supported taste and automatic keep-warm controls become available. Recipes without taste adjustment show **Default** as the only taste option. These controls prepare the next cook; selecting a menu or changing its options does not start heating.
 
-Press **Start cooking** to submit the selected recipe. **Stop cooking** is available while cooking, scheduled cooking or keeping warm. It stops independently of the menu selection. After a successful start, the preparation controls reset. On CMC301, the selection also clears if the start result is uncertain; check the cooker state before retrying.
+Press **Start cooking** to submit the selected recipe. **Stop cooking** is available while cooking, scheduled cooking or keeping warm. It stops independently of the menu selection. After a successful start, the preparation controls reset. On CMC301 and for normal3 scheduled starts, the selection also clears if the start result is uncertain; check the cooker state before retrying.
 
 While cooking, the menu, duration and taste selectors are unavailable. Separate **Current menu**, **Current taste** and **Current duration** sensors show device feedback when available; they are unknown while idle. Duration values are in minutes.
 
@@ -57,7 +57,7 @@ While cooking, the menu, duration and taste selectors are unavailable. Separate 
 | Cooking duration | Recipe-specific options | Recipe-specific options |
 | Taste | Fine rice only | Fine rice only |
 | Automatic keep-warm | Supported recipes | Supported recipes |
-| Scheduled completion | Supported recipes | Not exposed as a preparation control |
+| Scheduled completion | Supported recipes | Supported recipes |
 | Save recipe to panel | Supported | Supported for custom-slot recipes |
 | Cooking stage and description | Fine and quick rice | Fine and quick rice |
 
@@ -67,7 +67,9 @@ Duration choices use 5- or 10-minute intervals and include each recipe's bounds 
 
 ### Scheduled Completion
 
-On CMC301, **Scheduled duration** is the number of minutes until the meal finishes, not the delay before cooking starts. Set it to 0 for an immediate start. The selected recipe determines whether scheduling is available and the minimum completion time.
+On both models, **Scheduled duration** is the number of minutes until the meal finishes, not the delay before cooking starts. Set it to 0 for an immediate start. The selected recipe determines whether scheduling is available and the minimum completion time.
+
+normal3 supports scheduling for fine rice, quick rice, congee, cooking, sweet rice, brown rice and soup. Its protocol uses a local completion time: the integration converts the duration using Home Assistant’s configured time zone immediately before sending, following the official plugin’s use of phone local time. HA and the cooker must use the same time zone. The duration must exceed the cooking time and be at most 1439 minutes. Schedules crossing a daylight saving time change are rejected. Scheduled starts are sent once without automatic retries. This encoding has been compared with the supplied official plugin; acceptance and cancellation on the cooker still await a hardware test.
 
 The **Custom recipe** selector is editable only while idle on both models. It saves a bundled recipe with its default parameters to the panel without starting it or selecting a Cooking menu in HA. It shows **Other** for an identified recipe outside the bundled list; Other cannot be selected. normal3 reports its saved custom recipe independently and allows the extended recipes in this slot. CMC301 reports the saved recipe when the panel is in custom mode. Its candidates remain listed while cooking, with the selector disabled. Until the saved slot is observed, its selection is unknown; afterward, the last observed selection is retained until another observation or integration reload.
 
@@ -105,7 +107,7 @@ data:
   finish_in: 480
 ```
 
-Both CMC301 and normal3 support this action. Only CMC301 accepts `finish_in`; omit it for normal3. Only `jingzhu` accepts `taste: soft|middle|hard`. Omitted parameters use the bundled recipe defaults. Specify `device_id` when more than one cooker is loaded.
+Both CMC301 and normal3 support this action. Both accept `finish_in` for recipes that support scheduling. Only `jingzhu` accepts `taste: soft|middle|hard`. Omitted parameters use the bundled recipe defaults. Specify `device_id` when more than one cooker is loaded.
 
 ### Start a Custom Profile
 
