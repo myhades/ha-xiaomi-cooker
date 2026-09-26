@@ -14,6 +14,7 @@ from custom_components.xiaomi_miio_cooker import (
     _remove_replaced_duration_number,
     binary_sensor,
     button,
+    event,
     number,
     select,
     sensor,
@@ -99,7 +100,7 @@ async def test_running_feedback_uses_sensors_and_disables_controls(
 
 async def setup_platforms(hass, coordinator):
     entities = {}
-    for platform in (sensor, select, button, number, switch, binary_sensor):
+    for platform in (sensor, select, button, number, switch, binary_sensor, event):
         result = []
         await platform.async_setup_entry(
             hass,
@@ -389,3 +390,75 @@ async def test_fault_enum_keeps_raw_code_and_handles_future_values(
         assert fault.extra_state_attributes == {"code": code}
     for key in ("current_menu", "current_taste", "current_duration"):
         assert sensors[key].native_value is None
+
+
+@pytest.mark.parametrize("cmc", [False, True])
+async def test_finished_event_cycle_deduplication_and_cancellation(
+    hass, make_coordinator, cmc
+):
+    c = make_coordinator(cmc)
+    entities = await setup_platforms(hass, c)
+    finished = entities["event"][0]
+    finished.async_write_ha_state = Mock()
+    emit = Mock(wraps=finished._trigger_event)
+    finished._trigger_event = emit
+    menu = 2 if cmc else 1
+
+    def update(state, *, complete=False, recipe=menu):
+        c.async_set_updated_data(
+            replace(
+                c.data,
+                status=replace(c.data.status, status=state, menu=recipe),
+                properties={
+                    "cooking_finished": complete,
+                    "keep_warm_type": "automatic" if state == "keep_warm" else "none",
+                },
+            )
+        )
+        finished._handle_coordinator_update()
+
+    # A newly loaded device already in keep-warm must not emit an old completion.
+    update("keep_warm", complete=True)
+    emit.assert_not_called()
+    update("idle")
+    update("running")
+    update("keep_warm", complete=True)
+    assert finished.event_types == ["finished"]
+    assert emit.call_count == 1
+    assert finished.state is not None
+    assert finished.state_attributes["event_type"] == "finished"
+    assert finished.state_attributes["recipe"] == "jingzhu"
+    update("keep_warm", complete=True)
+    update("completed", complete=True)
+    assert emit.call_count == 1
+
+    # An explicit completed response / raw completion code also works without warm.
+    update("idle")
+    update("running")
+    update("completed" if cmc else "idle", complete=True)
+    assert emit.call_count == 2
+
+    update("idle")
+    update("running")
+    update("idle")  # A plain stop is not completion.
+    assert emit.call_count == 2
+    update("running")
+    await c.async_stop()
+    update("running")  # A stale response after stopping cannot re-arm the event.
+    update("keep_warm", complete=True)
+    assert emit.call_count == 2
+
+    update("idle")
+    update("running", recipe=4)
+    update("completed", recipe=4)
+    assert emit.call_count == 2
+    update("idle")
+    update("running")
+    c.async_set_update_error(DeviceException("offline"))
+    finished._handle_coordinator_update()
+    update("keep_warm", complete=True)  # Reconnection establishes a baseline.
+    assert emit.call_count == 2
+    update("idle")
+    update("running")
+    update("keep_warm", complete=True)
+    assert emit.call_count == 3

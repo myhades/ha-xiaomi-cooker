@@ -152,6 +152,16 @@
           "error": "Error",
           "updating": "Updating",
           "completed": "Completed"
+        },
+        "state_attributes": {
+          "keep_warm_type": {
+            "name": "Keep warm type",
+            "state": {
+              "none": "None",
+              "automatic": "Automatic",
+              "manual": "Manual"
+            }
+          }
         }
       },
       "menu": {
@@ -178,7 +188,16 @@
         "name": "Temperature"
       },
       "remaining": {
-        "name": "Remaining time"
+        "name": "Remaining time",
+        "state_attributes": {
+          "time_direction": {
+            "name": "Time direction",
+            "state": {
+              "remaining": "Remaining",
+              "elapsed": "Elapsed"
+            }
+          }
+        }
       },
       "duration": {
         "name": "Duration"
@@ -335,6 +354,26 @@
       },
       "boiling": {
         "name": "Water boiled"
+      }
+    },
+    "event": {
+      "cooking_finished": {
+        "name": "Cooking finished",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "finished": "Finished"
+            }
+          },
+          "keep_warm_type": {
+            "name": "Keep warm type",
+            "state": {
+              "none": "None",
+              "automatic": "Automatic",
+              "manual": "Manual"
+            }
+          }
+        }
       }
     }
   },

@@ -285,3 +285,29 @@ def test_normal3_raw_stage_parsing_does_not_require_dependency_text():
 
     stage = _build_stage_data(RawStage(), legacy_text=False)
     assert stage.state == 3 and stage.name is None and stage.description is None
+
+
+def test_normal3_warm_type_and_completion_preserve_device_minutes():
+    backend = make_normal3()
+    for func, menu, stage, kind, finished in [
+        ("running", "0001", "03000042ff", "none", False),
+        ("running", "0001", "10000042ff", "none", True),
+        ("autokeepwarm", "0001", "10000042ff", "automatic", True),
+        ("running", "0004", "03000042ff", "manual", False),
+        ("autokeepwarm", "0004", "10000042ff", "manual", False),
+        ("error", "0001", "10000042ff", "none", False),
+        ("precook", "0001", "10000042ff", "none", False),
+    ]:
+        raw = raw_status(stage)
+        raw.data.update(func=func, menu=menu)
+        backend._cooker.status = Mock(return_value=raw)
+        backend._cooker.get_temperature_history = Mock(
+            return_value=TemperatureHistory("0")
+        )
+        data = backend.fetch_data()
+        assert data.status.remaining == 10
+        assert data.properties["keep_warm_type"] == kind
+        assert data.properties["cooking_finished"] is finished
+        assert data.properties["time_direction"] == (
+            "elapsed" if kind != "none" else "remaining"
+        )

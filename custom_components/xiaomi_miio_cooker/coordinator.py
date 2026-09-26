@@ -59,6 +59,7 @@ class XiaomiMiioCookerCoordinator(DataUpdateCoordinator[CookerData]):
         self._profiles_by_key = {profile.key: profile for profile in self._profiles}
         self._selected_profile: str | None = None
         self._selection_revision = 0
+        self.stop_revision = 0
         self.recipe_options: RecipeOptions | None = None
         self._refresh_task: asyncio.Task | None = None
         entry.async_on_unload(self._cancel_delayed_refresh)
@@ -265,6 +266,8 @@ class XiaomiMiioCookerCoordinator(DataUpdateCoordinator[CookerData]):
 
     async def async_stop(self) -> None:
         """Stop the cooking process."""
+        # Mark even an uncertain stop response: it must not become a completion.
+        self.stop_revision += 1
         await self._async_execute_command(self.api.stop)
 
     async def async_select_cooking_menu(self, option: str) -> None:

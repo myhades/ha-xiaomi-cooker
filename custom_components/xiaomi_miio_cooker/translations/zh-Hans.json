@@ -152,6 +152,16 @@
           "error": "故障",
           "updating": "升级中",
           "completed": "已完成"
+        },
+        "state_attributes": {
+          "keep_warm_type": {
+            "name": "保温类型",
+            "state": {
+              "none": "无",
+              "automatic": "自动",
+              "manual": "手动"
+            }
+          }
         }
       },
       "menu": {
@@ -178,7 +188,16 @@
         "name": "温度"
       },
       "remaining": {
-        "name": "剩余时间"
+        "name": "剩余时间",
+        "state_attributes": {
+          "time_direction": {
+            "name": "计时方向",
+            "state": {
+              "remaining": "剩余",
+              "elapsed": "已用"
+            }
+          }
+        }
       },
       "duration": {
         "name": "时长"
@@ -335,6 +354,26 @@
       },
       "boiling": {
         "name": "水已煮开"
+      }
+    },
+    "event": {
+      "cooking_finished": {
+        "name": "烹饪完成",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "finished": "已完成"
+            }
+          },
+          "keep_warm_type": {
+            "name": "保温类型",
+            "state": {
+              "none": "无",
+              "automatic": "自动",
+              "manual": "手动"
+            }
+          }
+        }
       }
     }
   },

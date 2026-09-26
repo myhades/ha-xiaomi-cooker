@@ -69,19 +69,23 @@ Duration choices use 5- or 10-minute intervals and include each recipe's bounds 
 
 On CMC301, **Scheduled duration** is the number of minutes until the meal finishes, not the delay before cooking starts. Set it to 0 for an immediate start. The selected recipe determines whether scheduling is available and the minimum completion time.
 
-The **Custom recipe** selector saves a bundled recipe with its default parameters to the panel without starting it. It shows **Other** for an identified recipe outside the bundled list; Other cannot be selected. normal3 reports its saved custom recipe independently and allows the extended recipes in this slot. CMC301 reports the saved recipe when the panel is in custom mode. Its candidates remain listed while cooking, with the selector disabled. Until the saved slot is observed, its selection is unknown; afterward, the last observed selection is retained until another observation or integration reload.
+The **Custom recipe** selector is editable only while idle on both models. It saves a bundled recipe with its default parameters to the panel without starting it or selecting a Cooking menu in HA. It shows **Other** for an identified recipe outside the bundled list; Other cannot be selected. normal3 reports its saved custom recipe independently and allows the extended recipes in this slot. CMC301 reports the saved recipe when the panel is in custom mode. Its candidates remain listed while cooking, with the selector disabled. Until the saved slot is observed, its selection is unknown; afterward, the last observed selection is retained until another observation or integration reload.
 
 ### Feedback and Device Settings
 
-Feedback includes the current menu, working status, remaining time and duration. CMC301 also exposes an enum **Error** sensor (with the raw code in its attributes), remote-control permission, **Water boiled**, buzzer and display settings. The water-boiled flag is used by the official plugin for the add-noodles reminder; it is not a continuous measurement of whether water is currently boiling. Other entities depend on the model.
+Feedback includes the current menu, working status, remaining time and duration. CMC301 also exposes an enum **Error** sensor (with the raw code in its attributes), remote-control permission, **Water boiled** and display settings. The water-boiled flag is used by the official plugin for the add-noodles reminder; it is not a continuous measurement of whether water is currently boiling. Other entities depend on the model.
 
-**Panel mode lights** controls the CMC301 panel: on lights all mode indicators with the selected mode flashing; off lights only the selected mode. Raw protocol values are included in diagnostic downloads and debug logs instead of separate entities.
+**Panel recipe lights** controls the CMC301 panel: **All** lights all recipe indicators with the selected recipe flashing; **Selected** lights only the selected recipe. Raw protocol values are included in diagnostic downloads and debug logs instead of separate entities.
 
 **Panel auto off** offers **Off** and **2–10 minutes** on CMC301, or **Off** and **5–10 minutes** on normal3, in one-minute steps. Both models support **Completion notification**, which controls the Xiaomi Home completion push notification, separately from the buzzer. Phone delivery still depends on the Xiaomi service and app permissions. normal3 also provides **Lid open alarm** and **Lid-open keep-warm timeout**, with timeout options of 2, 4, 6, 8 and 10 minutes. normal3 settings can be changed while idle.
 
 Temperature comes from recorded temperature history when no direct reading is available; it is not an instantaneous heater or power measurement. Fine and quick rice show five cooking stages based on the official plugin's temperature-history method. Other recipes do not use that stage mapping. The single **Cooking stage** sensor includes a translated description attribute; the former stage-description entity is removed on reload.
 
-During cooking, **Automatic keep warm** shows device feedback when available (currently normal3) and rejects changes. CMC301 has no verified readback for this option, so its switch remains unavailable during cooking. normal3 settings are unavailable until the cooker is idle.
+**Automatic keep warm** is unavailable during cooking on both models. normal3 settings are unavailable until the cooker is idle.
+
+**Cooking finished** is an event entity shared by both models. Each observed cooking cycle emits one `finished` event when the device reports completion or enters automatic keep-warm. Its state is the last event timestamp, with `event_type`, `recipe` and `keep_warm_type` attributes. Stopping, manual keep-warm and reconnecting to an already finished cycle do not emit completion events. Polling can miss a brief completion state or a cycle that finishes while disconnected.
+
+**Status** exposes `keep_warm_type` as `none`, `automatic` or `manual`; insufficient feedback leaves the attribute unknown. **Remaining time** uses whole minutes: time remaining during cooking, time elapsed during keep-warm, distinguished by its `time_direction` attribute (`remaining` or `elapsed`). CMC301 rounds remaining minutes up and elapsed minutes down; normal3 keeps the device's minute readings.
 
 ## Actions
 

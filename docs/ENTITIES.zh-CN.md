@@ -1,6 +1,6 @@
 # 实体对照
 
-以下对应 main 分支实现，不代表已发布的 v0.5.0。CMC301 共 21 个实体，normal3 共 19 个实体。
+以下对应 main 分支实现，包含尚未发布的修改。CMC301 共 22 个实体，normal3 共 20 个实体。
 
 所有实体都依赖集成已加载且设备更新成功。表中“—”表示当前集成不提供该实体，不等于硬件绝对没有这项能力。“活动期间”包括烹饪、预约及保温；读不到数据时传感器为 `unknown`，控制条件不满足时控件为 `unavailable`。
 
@@ -9,7 +9,7 @@
 | Start cooking | button | ✓ | ✓ | 未处于活动期间且已选食谱；执行时还会检查设备状态。成功后清空菜单选择。 |
 | Stop cooking | button | ✓ | ✓ | 仅活动期间可用。 |
 | Cooking menu | select | 13 个食谱 | 11 个食谱 | 非活动期间可选；额外有 `none`（未选择），初始及清空后使用此值。 |
-| Fine rice taste（精煮口感） | select | ✓ | ✓ | `soft/middle/hard`；仅选中精煮饭且尚未开始时可用，其余情况不可用。 |
+| Fine rice taste（精煮口感） | select | ✓ | ✓ | `soft/middle/hard`；选中精煮饭时默认 `middle`，仅尚未开始时可用，其余情况不可用。 |
 | Duration | select | ✓ | ✓ | 已选食谱且非活动期间可用；字符串分钟数，例如 `"25"`；按食谱范围生成 5/10 分钟步进及边界值，固定时长只有一个选项。选食谱时自动选默认时长。 |
 | Automatic keep warm | switch | ✓ | ✓ | 开始前仅支持此选项的食谱可用。活动期间两边都不可用；normal3 非待机也不可用，其实际设置仍在内部读取，不以可操作开关呈现。 |
 | Scheduled duration | number | ✓ | — | 支持预约的食谱、非活动期间；0–1439 分钟整数，0 为立即开始，其他值还须符合食谱限制。 |
@@ -23,7 +23,8 @@
 | Current menu | enum sensor | ✓ | ✓ | 活动期间显示设备读回食谱；不识别的 ID 为 `other`，待机为 `unknown`。两边都不是“准备开始”的菜单选择。 |
 | Fine rice taste（精煮口感） | enum sensor | ✓ | ✓ | 仅精煮饭烹饪中显示 `soft/middle/hard`；其他菜单、保温、预约、待机及缺失反馈均为 `unknown`。CMC301 来自 texture 属性，normal3 来自 stage 中的口感字段。 |
 | Current duration | duration sensor | ✓ | ✓ | 活动期间的设备读回时长，数值分钟；待机为 `unknown`，不使用准备参数补值。 |
-| Remaining time | duration sensor | ✓ | ✓ | 数值分钟。CMC301 的秒读回除以 60，可能有小数；normal3 使用设备的整数分钟反馈。 |
+| Remaining time | duration sensor | ✓ | ✓ | 整数分钟；烹饪/预约为剩余时间，保温为已保温时间。属性 `time_direction` 分别为 `remaining/elapsed`。CMC301 剩余时间向上取整、已保温时间向下取整；normal3 保留设备的分钟反馈。 |
+| Cooking finished | event | ✓ | ✓ | 一次可观察到的烹饪完成产生一次 `finished` 事件；实体状态为最后事件时间，属性包含 `event_type`、`recipe` 和 `keep_warm_type`。手动保温结束不算烹饪完成。 |
 | Temperature | temperature sensor | ✓ | ✓ | °C。CMC301 仅取温度曲线最后一个样本，不保证实时；normal3 优先直接温度，不能解析时再取曲线。两边无有效数据都为 `unknown`。 |
 | Cooking stage | enum sensor | ✓ | ✓ | 仅两种饭在烹饪中且有有效曲线时提供五阶段；附带可翻译的说明属性，其余情况为 `unknown`。 |
 | Error | enum sensor | ✓ | — | `none/top_sensor/bottom_sensor/communication/other`；中文无/顶部传感器故障/底部传感器故障/通信故障/其他故障，原始码在 `code` 属性中。 |
@@ -45,7 +46,44 @@ Remaining time 和 Current duration 都使用 HA 的 duration 类型，原生单
 
 CMC301 当前通过 MIoT 2.28 获取曲线，切换状态时重新读取，保温状态没有被代码排除。空曲线、无有效样本或读取失败均会得到未知温度；即使有样本，也可能是最后一笔烹饪温度，不能保证持续反映保温温度。尚未找到可替代的独立实时温度属性。
 
-Current menu 直接显示设备报告的食谱，保温来源没有独立枚举。自动保温时若固件仍报告原食谱，菜单会继续显示该食谱；显式保温食谱则显示保温。这个区分依赖实际读回，不能将所有 `keep_warm` 状态一概视为自动保温。normal3 的原始协议存在 `autokeepwarm`，目前归一化后也显示 `keep_warm`；CMC301 没有已确认的独立来源字段。当前实现不能在所有情形下可靠报告自动/手动来源。
+Status 的 `keep_warm_type` 属性统一为 `none/automatic/manual`（未保温/自动/手动）；正在保温但反馈不足以判断时为 `null`。CMC301 插件 10202 在保温状态下按 `recipeId == 4` 区分手动保温，其他有效食谱 ID 为煮后自动保温。normal3 插件 11030 同样区分菜单 4，其他菜单的 `autokeepwarm` 为自动保温；历史兼容状态无法确定来源时不猜测。
+
+CMC301 插件 10187 明确说明自动保温最长 24 小时，结合设备的倒计时反馈，已保温分钟按 `(86400 - 剩余秒数) // 60` 换算；手动保温改用设备报告的本次保温时长作为基准。无效时长、负数或超过基准的倒计时返回未知。normal3 的保温分钟本来就是正走时，保持不变。本轮未进行新的加热测试，CMC301 新换算仍需实际运行确认。
+
+例如判断自动保温：
+
+```jinja2
+{{ state_attr('sensor.xiaomi_rice_cooker_status', 'keep_warm_type') == 'automatic' }}
+```
+
+## 烹饪完成自动化
+
+两台设备统一使用 Cooking finished 事件实体，不再需要自动化解析 Cooking stage 的原始阶段码。事件必须先观察到烹饪/预约，再读到明确完成标志或煮后自动保温；同一轮只触发一次。停止命令、单纯返回待机、手动保温、加载时已经完成以及断线重连时读到旧完成状态均不会触发。
+
+这是轮询设备得出的事件，不是设备推送：如果不开自动保温且完成状态在两次轮询之间已消失，或者完成发生在离线期间，可能漏报。集成不会把所有“运行 → 待机”变化当作完成，以免取消操作产生通知。
+
+下面可替换原通知自动化的触发器，保留 `FINISHED` 分支和通知动作；实体 ID 以 HA 中实际生成的为准。过滤初次加载和恢复可用状态，同时允许首次完成事件从 `unknown` 变为时间戳。事件类型不会每轮变化，因此应监听实体的时间戳，不能只监听 `event_type` 属性。
+
+```yaml
+triggers:
+  - trigger: state
+    entity_id: event.xiaomi_rice_cooker_cooking_finished
+    not_from:
+      - unavailable
+    not_to:
+      - unavailable
+      - unknown
+    id: FINISHED
+conditions:
+  - condition: template
+    value_template: >-
+      {{ trigger.from_state is not none
+         and trigger.to_state.attributes.get('event_type') == 'finished' }}
+```
+
+如果同一自动化还接受手动调用（例如停止并保温），不要把上面的条件放在全局 `conditions` 中；放到 `FINISHED` 分支中，与原来的触发器 ID 条件并列，避免影响手动调用。
+
+事件实体语义依据：[Home Assistant Event entity](https://developers.home-assistant.io/docs/core/entity/event/)。
 
 ## 2026-09-26 插件与接口复核
 

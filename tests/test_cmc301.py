@@ -85,7 +85,7 @@ def test_feedback_units_partial_errors_and_history(device, metadata):
     backend = Cmc301Backend(device, metadata)
     snapshot = backend.fetch_data()
     assert snapshot.status.mode == "quick_cook"
-    assert snapshot.status.remaining == 61 / 60
+    assert snapshot.status.remaining == 2
     assert snapshot.properties["recorded_temperature"] == 27
     assert snapshot.temperature is None
     device.fail_properties.add((2, 26))
@@ -197,7 +197,8 @@ def test_recorded_hardware_session_and_history_lifecycle(device, metadata, monke
             assert snapshot.status.status == "scheduled"
             assert snapshot.status.menu == 3
             assert (
-                snapshot.status.remaining == row["properties"]["remaining_seconds"] / 60
+                snapshot.status.remaining
+                == (row["properties"]["remaining_seconds"] + 59) // 60
             )
             if row["elapsed_s"] >= 68:
                 assert snapshot.properties["recorded_temperature"] == 26
@@ -209,3 +210,36 @@ def test_recorded_hardware_session_and_history_lifecycle(device, metadata, monke
     snapshot = backend.fetch_data()
     assert snapshot.status.status == "idle"
     assert snapshot.properties["recorded_temperature"] is None
+
+
+def test_whole_minutes_and_keep_warm_direction(device, metadata):
+    backend = Cmc301Backend(device, metadata)
+    device.values[2, 1] = 2
+    for seconds, expected in [(0, 0), (1, 1), (59, 1), (60, 1), (61, 2)]:
+        device.values[2, 21] = seconds
+        assert backend.fetch_data().status.remaining == expected
+    device.values[2, 1] = 4
+    device.values[2, 19] = 1
+    device.values[2, 20] = 28  # Original rice duration must not be used as warm limit.
+    for seconds, expected in [
+        (86400, 0),
+        (86399, 0),
+        (86340, 1),
+        (0, 1440),
+        (86401, None),
+    ]:
+        device.values[2, 21] = seconds
+        data = backend.fetch_data()
+        assert data.status.remaining == expected
+        assert data.properties["keep_warm_type"] == "automatic"
+        assert data.properties["time_direction"] == "elapsed"
+        assert data.properties["cooking_finished"]
+    device.values[2, 19] = 4
+    device.values[2, 20] = 30
+    device.values[2, 21] = 1679
+    data = backend.fetch_data()
+    assert data.status.remaining == 2
+    assert data.properties["keep_warm_type"] == "manual"
+    assert not data.properties["cooking_finished"]
+    device.values[2, 19] = None
+    assert backend.fetch_data().status.remaining is None

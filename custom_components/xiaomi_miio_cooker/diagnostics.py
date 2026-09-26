@@ -11,6 +11,9 @@ from .coordinator import XiaomiCookerConfigEntry
 SAFE_PROPERTIES = {
     *RAW_DIAGNOSTIC_PROPERTIES,
     "auto_keep_warm",
+    "keep_warm_type",
+    "time_direction",
+    "cooking_finished",
     "status_code",
     "fault",
     "mode_code",

@@ -152,6 +152,16 @@
           "error": "Fehler",
           "updating": "Aktualisierung läuft",
           "completed": "Fertig"
+        },
+        "state_attributes": {
+          "keep_warm_type": {
+            "name": "Warmhalteart",
+            "state": {
+              "none": "Keine",
+              "automatic": "Automatisch",
+              "manual": "Manuell"
+            }
+          }
         }
       },
       "menu": {
@@ -178,7 +188,16 @@
         "name": "Temperatur"
       },
       "remaining": {
-        "name": "Restzeit"
+        "name": "Restzeit",
+        "state_attributes": {
+          "time_direction": {
+            "name": "Zeitrichtung",
+            "state": {
+              "remaining": "Verbleibend",
+              "elapsed": "Vergangen"
+            }
+          }
+        }
       },
       "duration": {
         "name": "Dauer"
@@ -335,6 +354,26 @@
       },
       "boiling": {
         "name": "Wasser aufgekocht"
+      }
+    },
+    "event": {
+      "cooking_finished": {
+        "name": "Kochen beendet",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "finished": "Beendet"
+            }
+          },
+          "keep_warm_type": {
+            "name": "Warmhalteart",
+            "state": {
+              "none": "Keine",
+              "automatic": "Automatisch",
+              "manual": "Manuell"
+            }
+          }
+        }
       }
     }
   },

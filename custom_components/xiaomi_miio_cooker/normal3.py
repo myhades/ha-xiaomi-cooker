@@ -308,6 +308,36 @@ class Normal3Backend:
             else None,
         }
         if normal3:
+            # Plugin 11030 treats menu 4 as a manual keep-warm program;
+            # autokeepwarm on another menu is the post-cooking phase.
+            warming = status.status == "keep_warm" or (
+                status.status == "running" and status.menu == 4
+            )
+            warm_type = (
+                "manual"
+                if warming and status.menu == 4
+                else "automatic"
+                if warming and raw_data.get("func") == "autokeepwarm"
+                else None
+                if warming
+                else "none"
+            )
+            properties.update(
+                {
+                    "keep_warm_type": warm_type,
+                    "time_direction": "elapsed" if warming else "remaining",
+                    "cooking_finished": (
+                        type(status.menu) is int
+                        and status.menu > 0
+                        and status.menu != 4
+                        and status.status in ("running", "keep_warm", "idle")
+                        and (
+                            warm_type == "automatic"
+                            or (status.stage is not None and status.stage.state == 16)
+                        )
+                    ),
+                }
+            )
             settings = _build_settings_data(getattr(raw_status, "settings", None))
             timeouts = _build_interaction_timeouts_data(
                 getattr(raw_status, "interaction_timeouts", None)

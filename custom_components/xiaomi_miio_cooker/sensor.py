@@ -326,6 +326,14 @@ class XiaomiCookerSensor(XiaomiMiioCookerEntity, SensorEntity):
     @property
     def extra_state_attributes(self):
         """Keep stage provenance and numeric codes separate from display text."""
+        if self.entity_description.key == "status":
+            return {
+                "keep_warm_type": self.coordinator.data.properties.get("keep_warm_type")
+            }
+        if self.entity_description.key == "remaining":
+            return {
+                "time_direction": self.coordinator.data.properties.get("time_direction")
+            }
         if self.entity_description.key == "fault":
             return {"code": self.coordinator.data.properties.get("fault")}
         if self.entity_description.key not in {"stage_name", "stage_description"}:

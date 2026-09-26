@@ -289,15 +289,47 @@ class Cmc301Backend:
         values["stage_source"] = "temperature_history"
         stage = self._history_stage if show_rice_stage else None
         remaining = values["remaining_seconds"]
+        warming = values["status_code"] == 4
+        recipe_id = values["recipe_id"]
+        warm_type = (
+            ("manual" if recipe_id == 4 else "automatic")
+            if warming and type(recipe_id) is int and recipe_id > 0
+            else None
+            if warming
+            else "none"
+        )
+        values["keep_warm_type"] = warm_type
+        values["time_direction"] = "elapsed" if warming else "remaining"
+        values["cooking_finished"] = (
+            values["fault"] == 0
+            and type(recipe_id) is int
+            and recipe_id > 0
+            and recipe_id != 4
+            and (values["status_code"] == 7 or warm_type == "automatic")
+        )
+        minutes_left = None
+        if type(remaining) is int and remaining >= 0:
+            if warming:
+                # Official plugin 10202 distinguishes menu 4; 10187 specifies
+                # a 24-hour limit for automatic keep-warm. Never use the rice
+                # cooking duration as the automatic keep-warm countdown base.
+                duration = 1440 if warm_type == "automatic" else values["duration"]
+                if (
+                    warm_type is not None
+                    and type(duration) is int
+                    and 0 < duration <= 1440
+                    and remaining <= duration * 60
+                ):
+                    minutes_left = (duration * 60 - remaining) // 60
+            else:
+                minutes_left = (remaining + 59) // 60
         return CookerData(
             device_info=self.metadata,
             status=CookerStatusData(
                 mode=MODES.get(values["mode_code"], "unknown"),
                 status=STATES.get(values["status_code"], "unknown"),
                 menu=values["recipe_id"],
-                remaining=remaining / 60
-                if type(remaining) is int and remaining >= 0
-                else None,
+                remaining=minutes_left,
                 duration=values["duration"],
                 favorite=None,
                 stage=stage,
