@@ -85,6 +85,7 @@ def _remove_replaced_duration_number(hass, entry, device_unique_id, model=None):
         replaced.extend(
             [
                 ("switch", "panel_auto_off"),
+                ("switch", "all_modes_lit"),
                 ("number", "display_timeout"),
                 ("button", "save_panel_recipe"),
             ]

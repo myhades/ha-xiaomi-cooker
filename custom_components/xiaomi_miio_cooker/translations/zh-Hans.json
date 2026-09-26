@@ -120,6 +120,13 @@
           "8": "8 分钟",
           "10": "10 分钟"
         }
+      },
+      "panel_recipe_lights": {
+        "name": "面板食谱指示灯",
+        "state": {
+          "selected": "当前选择",
+          "all": "全部"
+        }
       }
     },
     "sensor": {
@@ -319,9 +326,6 @@
       },
       "completion_notification": {
         "name": "完成推送"
-      },
-      "all_modes_lit": {
-        "name": "模式指示灯"
       },
       "buzzer": {
         "name": "响铃"

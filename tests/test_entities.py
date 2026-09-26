@@ -266,6 +266,8 @@ async def test_stage_migration_preserves_name_and_other_entries(
         if uid == "device_stage_description"
         else "sensor.old_raw"
         if uid == "device_recipe_type"
+        else "switch.old_lights"
+        if domain == "switch" and uid == "device_all_modes_lit"
         else None
     )
     registry.async_get.return_value = SimpleNamespace(
@@ -278,7 +280,7 @@ async def test_stage_migration_preserves_name_and_other_entries(
         hass, SimpleNamespace(entry_id="ours"), "device", model
     )
     assert registry.async_remove.call_count == int(same_entry) * (
-        2 if model == MODEL_CMC301 else 1
+        3 if model == MODEL_CMC301 else 1
     )
     assert all(
         call.args[2] != "device_stage_name"

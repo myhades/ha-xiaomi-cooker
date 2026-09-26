@@ -7,10 +7,36 @@ from miio import DeviceException
 from custom_components.xiaomi_miio_cooker.cmc301 import Cmc301Backend
 from custom_components.xiaomi_miio_cooker.select import (
     LidTimeoutSelect,
+    PanelRecipeLightsSelect,
     PanelRecipeSelect,
     PanelSleepSelect,
     RecipeTasteSelect,
 )
+
+
+async def test_panel_recipe_lights_write_and_readback(make_coordinator):
+    coordinator = make_coordinator()
+    lights = PanelRecipeLightsSelect(coordinator, "panel_recipe_lights")
+    assert lights.options == ["selected", "all"]
+    assert lights.available and lights.current_option == "all"
+    for option, flag in (("selected", False), ("all", True)):
+        await lights.async_select_option(option)
+        coordinator.api.set_setting.assert_called_with("all_modes_lit", flag)
+        coordinator.async_set_updated_data(
+            replace(
+                coordinator.data,
+                properties={**coordinator.data.properties, "all_modes_lit": flag},
+            )
+        )
+        assert lights.current_option == option
+    coordinator.api.set_setting.reset_mock()
+    with pytest.raises(HomeAssistantError):
+        await lights.async_select_option("invalid")
+    coordinator.api.set_setting.assert_not_called()
+    coordinator.async_set_updated_data(replace(coordinator.data, properties={}))
+    assert lights.current_option is None and not lights.available
+    coordinator.async_set_update_error(DeviceException("Offline"))
+    assert not lights.available
 
 
 async def test_normal3_shared_panel_controls(make_coordinator):

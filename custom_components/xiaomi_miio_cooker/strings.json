@@ -120,6 +120,13 @@
           "8": "8 minutes",
           "10": "10 minutes"
         }
+      },
+      "panel_recipe_lights": {
+        "name": "Panel recipe lights",
+        "state": {
+          "selected": "Selected",
+          "all": "All"
+        }
       }
     },
     "sensor": {
@@ -319,9 +326,6 @@
       },
       "completion_notification": {
         "name": "Completion notification"
-      },
-      "all_modes_lit": {
-        "name": "Panel mode lights"
       },
       "buzzer": {
         "name": "Buzzer"

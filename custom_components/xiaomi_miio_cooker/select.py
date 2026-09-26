@@ -61,7 +61,11 @@ async def async_setup_entry(
                 PanelRecipeSelect(coordinator, "panel_recipe"),
             ]
         )
-        if not coordinator.is_cmc301:
+        if coordinator.is_cmc301:
+            async_add_entities(
+                [PanelRecipeLightsSelect(coordinator, "panel_recipe_lights")]
+            )
+        else:
             async_add_entities([LidTimeoutSelect(coordinator, "lid_open_timeout")])
 
 
@@ -205,6 +209,33 @@ class PanelSleepSelect(CookerPropertyEntity, SelectEntity):
         await self.coordinator.async_set_setting(
             "panel_sleep", "off" if option == "off" else int(option)
         )
+
+
+class PanelRecipeLightsSelect(CookerPropertyEntity, SelectEntity):
+    """Choose which panel recipe indicators are lit, using device readback."""
+
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_options: ClassVar[list[str]] = ["selected", "all"]
+
+    @property
+    def current_option(self):
+        value = self.coordinator.data.properties.get("all_modes_lit")
+        if type(value) is not bool:
+            return None
+        return "all" if value else "selected"
+
+    @property
+    def available(self):
+        return (
+            super().available
+            and self.coordinator.settings_writable
+            and self.current_option is not None
+        )
+
+    async def async_select_option(self, option):
+        if option not in self.options:
+            raise validation_error("unsupported_option")
+        await self.coordinator.async_set_setting("all_modes_lit", option == "all")
 
 
 class PanelRecipeSelect(CookerPropertyEntity, SelectEntity):

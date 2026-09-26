@@ -22,7 +22,7 @@ async def async_setup_entry(
         async_add_entities([RecipeKeepWarmSwitch(coordinator, "next_auto_keep_warm")])
     if coordinator.recipe_codec is not None:
         keys = (
-            ("completion_notification", "all_modes_lit", "buzzer")
+            ("completion_notification", "buzzer")
             if coordinator.is_cmc301
             else ("completion_notification", "lid_open_warning")
         )

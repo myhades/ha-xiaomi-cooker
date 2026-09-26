@@ -120,6 +120,13 @@
           "8": "8 Minuten",
           "10": "10 Minuten"
         }
+      },
+      "panel_recipe_lights": {
+        "name": "Rezeptanzeigen",
+        "state": {
+          "selected": "Ausgewählt",
+          "all": "Alle"
+        }
       }
     },
     "sensor": {
@@ -319,9 +326,6 @@
       },
       "completion_notification": {
         "name": "Fertigmeldung"
-      },
-      "all_modes_lit": {
-        "name": "Programmanzeigen"
       },
       "buzzer": {
         "name": "Signalton"

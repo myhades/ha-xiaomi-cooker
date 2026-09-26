@@ -73,7 +73,7 @@ class RecipeParameterEntity(XiaomiMiioCookerEntity):
             "panel_auto_off": "mdi:monitor-off",
             "display_timeout": "mdi:timer-cog-outline",
             "completion_notification": "mdi:bell-check-outline",
-            "all_modes_lit": "mdi:led-on",
+            "panel_recipe_lights": "mdi:led-on",
             "buzzer": "mdi:volume-high",
             "remote_control": "mdi:remote",
             "boiling": "mdi:pot-steam-outline",
