@@ -59,7 +59,8 @@
           "soup": "Soup",
           "noodles": "Instant noodles",
           "baby_congee": "Baby congee",
-          "other": "Other"
+          "other": "Other",
+          "none": "Not selected"
         }
       },
       "next_taste": {
@@ -239,7 +240,19 @@
         }
       },
       "fault": {
-        "name": "Fault code"
+        "name": "Fault",
+        "state": {
+          "none": "No fault",
+          "top_sensor": "Top sensor fault",
+          "bottom_sensor": "Bottom sensor fault",
+          "communication": "Communication fault",
+          "other": "Other fault"
+        },
+        "state_attributes": {
+          "code": {
+            "name": "Code"
+          }
+        }
       },
       "recipe_id": {
         "name": "Recipe ID"
@@ -274,6 +287,39 @@
           "cloud": "Cloud",
           "custom": "Custom"
         }
+      },
+      "current_menu": {
+        "name": "Current menu",
+        "state": {
+          "jingzhu": "Fine rice",
+          "kuaizhu": "Quick rice",
+          "zhuzhou": "Congee",
+          "baowen": "Keep warm",
+          "cake": "Cake",
+          "yoghurt": "Yoghurt",
+          "refan": "Reheat",
+          "cooking": "Steam",
+          "sweet_rice": "Fragrant rice",
+          "quick_rice": "Quick rice",
+          "brown_rice": "Brown rice",
+          "oden": "Oden",
+          "soup": "Soup",
+          "noodles": "Instant noodles",
+          "baby_congee": "Baby congee",
+          "other": "Other"
+        }
+      },
+      "current_taste": {
+        "name": "Current taste",
+        "state": {
+          "soft": "Soft",
+          "middle": "Medium",
+          "hard": "Hard",
+          "default": "Default"
+        }
+      },
+      "current_duration": {
+        "name": "Current duration"
       }
     },
     "number": {
@@ -312,7 +358,7 @@
         "name": "Remote Control"
       },
       "boiling": {
-        "name": "Water boiling"
+        "name": "Water boiled"
       }
     }
   },
@@ -438,6 +484,9 @@
     },
     "command_failed": {
       "message": "The cooker command failed or its result is uncertain. Check the device before retrying."
+    },
+    "not_cooking": {
+      "message": "No cooking session is active."
     }
   }
 }

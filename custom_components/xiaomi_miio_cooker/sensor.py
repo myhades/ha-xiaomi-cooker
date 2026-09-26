@@ -17,6 +17,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
+from .cmc301 import FAULTS
 from .const import MODEL_CMC301, MODEL_NORMAL3
 from .coordinator import XiaomiCookerConfigEntry
 from .entity import XiaomiMiioCookerEntity
@@ -215,6 +216,33 @@ async def async_setup_entry(
                 "lid_open_timeout",
             }
         )
+    descriptions = (
+        *descriptions,
+        XiaomiCookerSensorDescription(
+            key="current_menu",
+            translation_key="current_menu",
+            attribute_name="menu",
+            device_class=SensorDeviceClass.ENUM,
+            enum_options=(*coordinator.cooking_menu_options, "other"),
+            icon="mdi:menu",
+        ),
+        XiaomiCookerSensorDescription(
+            key="current_taste",
+            translation_key="current_taste",
+            attribute_name="taste",
+            device_class=SensorDeviceClass.ENUM,
+            enum_options=("soft", "middle", "hard", "default"),
+            icon="mdi:rice",
+        ),
+        XiaomiCookerSensorDescription(
+            key="current_duration",
+            translation_key="current_duration",
+            attribute_name="duration",
+            device_class=SensorDeviceClass.DURATION,
+            native_unit_of_measurement=UnitOfTime.MINUTES,
+            icon="mdi:timer-outline",
+        ),
+    )
     async_add_entities(
         XiaomiCookerSensor(coordinator, description) for description in descriptions
     )
@@ -290,6 +318,8 @@ class XiaomiCookerSensor(XiaomiMiioCookerEntity, SensorEntity):
     @property
     def extra_state_attributes(self):
         """Keep stage provenance and numeric codes separate from display text."""
+        if self.entity_description.key == "fault":
+            return {"code": self.coordinator.data.properties.get("fault")}
         if self.entity_description.key not in {"stage_name", "stage_description"}:
             return None
         data = self.coordinator.data
@@ -315,6 +345,24 @@ class XiaomiCookerSensor(XiaomiMiioCookerEntity, SensorEntity):
         data = self.coordinator.data
         if data is None:
             return None
+
+        key = self.entity_description.key
+        if key in {"current_menu", "current_taste", "current_duration"}:
+            if not self.coordinator.cooking_active:
+                return None
+            if key == "current_menu":
+                return self.coordinator.displayed_menu
+            if key == "current_duration":
+                return data.status.duration
+            menu = self.coordinator.displayed_menu
+            if menu not in (None, "other", "jingzhu"):
+                return "default"
+            return {0: "soft", 1: "middle", 2: "hard"}.get(
+                self.coordinator.displayed_parameter("taste")
+            )
+        if key == "fault":
+            code = data.properties.get("fault")
+            return FAULTS.get(code, "other") if type(code) is int else None
 
         if (
             self.coordinator.is_cmc301
@@ -459,6 +507,8 @@ def cmc301_descriptions():
                 attribute_name=key,
                 entity_category=EntityCategory.DIAGNOSTIC,
                 entity_registry_enabled_default=key == "fault",
+                device_class=SensorDeviceClass.ENUM if key == "fault" else None,
+                enum_options=(*FAULTS.values(), "other") if key == "fault" else None,
                 icon="mdi:alert-circle-outline" if key == "fault" else "mdi:code-tags",
             )
         )

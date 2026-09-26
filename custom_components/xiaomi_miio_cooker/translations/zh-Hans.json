@@ -59,7 +59,8 @@
           "soup": "炖汤",
           "noodles": "泡面",
           "baby_congee": "婴儿粥",
-          "other": "其他"
+          "other": "其他",
+          "none": "未选择"
         }
       },
       "next_taste": {
@@ -239,7 +240,19 @@
         }
       },
       "fault": {
-        "name": "故障代码"
+        "name": "故障",
+        "state": {
+          "none": "无故障",
+          "top_sensor": "顶部传感器故障",
+          "bottom_sensor": "底部传感器故障",
+          "communication": "通信故障",
+          "other": "其他故障"
+        },
+        "state_attributes": {
+          "code": {
+            "name": "代码"
+          }
+        }
       },
       "recipe_id": {
         "name": "食谱编号"
@@ -274,6 +287,39 @@
           "cloud": "云端",
           "custom": "自定义"
         }
+      },
+      "current_menu": {
+        "name": "当前菜单",
+        "state": {
+          "jingzhu": "精煮饭",
+          "kuaizhu": "快煮饭",
+          "zhuzhou": "煮粥",
+          "baowen": "保温",
+          "cake": "蛋糕",
+          "yoghurt": "酸奶",
+          "refan": "再加热",
+          "cooking": "蒸煮",
+          "sweet_rice": "香甜饭",
+          "quick_rice": "快速煮饭",
+          "brown_rice": "糙米饭",
+          "oden": "关东煮",
+          "soup": "炖汤",
+          "noodles": "泡面",
+          "baby_congee": "婴儿粥",
+          "other": "其他"
+        }
+      },
+      "current_taste": {
+        "name": "当前口感",
+        "state": {
+          "soft": "偏软",
+          "middle": "适中",
+          "hard": "偏硬",
+          "default": "默认"
+        }
+      },
+      "current_duration": {
+        "name": "当前时长"
       }
     },
     "number": {
@@ -312,7 +358,7 @@
         "name": "远程控制"
       },
       "boiling": {
-        "name": "水已沸腾"
+        "name": "水已煮开"
       }
     }
   },
@@ -438,6 +484,9 @@
     },
     "command_failed": {
       "message": "电饭煲命令失败或结果未确认，请检查设备后再决定是否重试。"
+    },
+    "not_cooking": {
+      "message": "电饭煲当前没有进行烹饪或保温。"
     }
   }
 }

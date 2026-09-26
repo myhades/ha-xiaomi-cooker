@@ -59,7 +59,8 @@
           "soup": "Suppe",
           "noodles": "Instantnudeln",
           "baby_congee": "Baby-Reisbrei",
-          "other": "Andere"
+          "other": "Andere",
+          "none": "Nicht ausgewählt"
         }
       },
       "next_taste": {
@@ -239,7 +240,19 @@
         }
       },
       "fault": {
-        "name": "Fehlercode"
+        "name": "Störung",
+        "state": {
+          "none": "Keine Störung",
+          "top_sensor": "Oberer Sensor defekt",
+          "bottom_sensor": "Unterer Sensor defekt",
+          "communication": "Kommunikationsfehler",
+          "other": "Andere Störung"
+        },
+        "state_attributes": {
+          "code": {
+            "name": "Code"
+          }
+        }
       },
       "recipe_id": {
         "name": "Rezept-ID"
@@ -274,6 +287,39 @@
           "cloud": "Cloud",
           "custom": "Benutzerdefiniert"
         }
+      },
+      "current_menu": {
+        "name": "Aktuelles Programm",
+        "state": {
+          "jingzhu": "Schonend gegarter Reis",
+          "kuaizhu": "Schnellreis",
+          "zhuzhou": "Reisbrei",
+          "baowen": "Warmhalten",
+          "cake": "Kuchen",
+          "yoghurt": "Joghurt",
+          "refan": "Aufwärmen",
+          "cooking": "Dampfgaren",
+          "sweet_rice": "Aromatischer Reis",
+          "quick_rice": "Schnellreis",
+          "brown_rice": "Vollkornreis",
+          "oden": "Oden",
+          "soup": "Suppe",
+          "noodles": "Instantnudeln",
+          "baby_congee": "Baby-Reisbrei",
+          "other": "Andere"
+        }
+      },
+      "current_taste": {
+        "name": "Aktuelle Konsistenz",
+        "state": {
+          "soft": "Weich",
+          "middle": "Mittel",
+          "hard": "Fest",
+          "default": "Standard"
+        }
+      },
+      "current_duration": {
+        "name": "Aktuelle Dauer"
       }
     },
     "number": {
@@ -312,7 +358,7 @@
         "name": "Fernsteuerung"
       },
       "boiling": {
-        "name": "Wasser kocht"
+        "name": "Wasser aufgekocht"
       }
     }
   },
@@ -438,6 +484,9 @@
     },
     "command_failed": {
       "message": "Der Befehl ist fehlgeschlagen oder wurde nicht bestätigt. Vor einem erneuten Versuch das Gerät prüfen."
+    },
+    "not_cooking": {
+      "message": "Es ist kein Koch- oder Warmhaltevorgang aktiv."
     }
   }
 }

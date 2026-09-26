@@ -160,6 +160,8 @@ STATES = {
     6: "updating",
     7: "completed",
 }
+FAULTS = {0: "none", 5: "top_sensor", 6: "bottom_sensor", 7: "communication"}
+
 MODES = {1: "quick_cook", 2: "fine_cook", 3: "cook_congee", 4: "keep_warm", 5: "custom"}
 
 

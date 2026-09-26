@@ -254,6 +254,9 @@ class XiaomiMiioCookerCoordinator(DataUpdateCoordinator[CookerData]):
         """Select a cooking menu for the start button."""
         if self.cooking_active:
             raise validation_error("cooker_busy")
+        if option == "none":
+            self._set_cooking_selection(None)
+            return
         if option not in self.cooking_menu_options:
             raise validation_error("unsupported_recipe")
 

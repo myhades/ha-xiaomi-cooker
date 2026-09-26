@@ -10,6 +10,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .coordinator import XiaomiCookerConfigEntry
 from .entity import XiaomiMiioCookerEntity
+from .errors import validation_error
 
 # Polls and writes are serialized per device by the coordinator/API locks.
 PARALLEL_UPDATES = 0
@@ -77,7 +78,7 @@ class XiaomiCookerButton(XiaomiMiioCookerEntity, ButtonEntity):
                 and not self.coordinator.cooking_active
                 and self.coordinator.selected_recipe is not None
             )
-        return super().available
+        return super().available and self.coordinator.cooking_active
 
     async def async_press(self) -> None:
         """Handle button presses."""
@@ -85,4 +86,6 @@ class XiaomiCookerButton(XiaomiMiioCookerEntity, ButtonEntity):
             await self.coordinator.async_start_selected_profile()
             return
 
+        if not self.coordinator.cooking_active:
+            raise validation_error("not_cooking")
         await self.coordinator.async_stop()

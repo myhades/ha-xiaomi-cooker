@@ -45,11 +45,11 @@ Enter the cooker IP address and token. The model is detected automatically; only
 
 ## Cooking
 
-Select a **Cooking menu** first. The duration selector automatically chooses that recipe's default duration, and the supported taste and automatic keep-warm controls become available. Recipes without taste adjustment show **Default** as the only taste option. These controls prepare the next cook; selecting a menu or changing its options does not start heating.
+Select a **Cooking menu** first. **Not selected** clears the preparation and disables the start button. The duration selector automatically chooses that recipe's default duration, and the supported taste and automatic keep-warm controls become available. Recipes without taste adjustment show **Default** as the only taste option. These controls prepare the next cook; selecting a menu or changing its options does not start heating.
 
-Press **Start cooking** to submit the selected recipe. Press **Stop cooking** to stop independently of the menu selection. After a successful start, the preparation controls reset. On CMC301, the selection also clears if the start result is uncertain; check the cooker state before retrying.
+Press **Start cooking** to submit the selected recipe. **Stop cooking** is available while cooking, scheduled cooking or keeping warm. It stops independently of the menu selection. After a successful start, the preparation controls reset. On CMC301, the selection also clears if the start result is uncertain; check the cooker state before retrying.
 
-While cooking, the menu, duration and taste selectors display the device's current values and cannot be changed. They return to recipe preparation when the cooker is idle. Duration values are in minutes.
+While cooking, the menu, duration and taste selectors are unavailable. Separate **Current menu**, **Current taste** and **Current duration** sensors show device feedback when available; they are unknown while idle. Duration values are in minutes.
 
 | Feature | CMC301 | normal3 |
 |---------|--------|---------|
@@ -69,15 +69,15 @@ Duration choices use 5- or 10-minute intervals and include each recipe's bounds 
 
 On CMC301, **Scheduled duration** is the number of minutes until the meal finishes, not the delay before cooking starts. Set it to 0 for an immediate start. The selected recipe determines whether scheduling is available and the minimum completion time.
 
-The **Custom recipe** selector saves a bundled recipe with its default parameters to the panel without starting it. It shows **Other** for an identified recipe outside the bundled list; Other cannot be selected. normal3 reports its saved custom recipe independently and allows the extended recipes in this slot. CMC301 reports the saved recipe when the panel is in custom mode. Until that is observed, the saved selection is unknown; afterward, the last observed selection is retained until another observation or integration reload.
+The **Custom recipe** selector saves a bundled recipe with its default parameters to the panel without starting it. It shows **Other** for an identified recipe outside the bundled list; Other cannot be selected. normal3 reports its saved custom recipe independently and allows the extended recipes in this slot. CMC301 reports the saved recipe when the panel is in custom mode. Its candidates remain listed while cooking, with the selector disabled. Until the saved slot is observed, its selection is unknown; afterward, the last observed selection is retained until another observation or integration reload.
 
 ### Feedback and Device Settings
 
-Feedback includes the current menu, working status, remaining time and duration. CMC301 also exposes fault codes, remote-control permission, boiling feedback, buzzer and display settings. Other entities depend on the model.
+Feedback includes the current menu, working status, remaining time and duration. CMC301 also exposes an enum **Fault** sensor (with the raw code in its attributes), remote-control permission, **Water boiled**, buzzer and display settings. The water-boiled flag is used by the official plugin for the add-noodles reminder; it is not a continuous measurement of whether water is currently boiling. Other entities depend on the model.
 
 **Panel mode lights** controls the CMC301 panel: on lights all mode indicators with the selected mode flashing; off lights only the selected mode. Raw protocol sensors are disabled by default.
 
-**Panel auto off** offers **Off** and **2–10 minutes** on CMC301, or **Off** and **5–10 minutes** on normal3, in one-minute steps. Both models support **Completion notification**. normal3 also provides **Lid open alarm** and **Lid-open keep-warm timeout**, with timeout options of 2, 4, 6, 8 and 10 minutes. normal3 settings can be changed while idle.
+**Panel auto off** offers **Off** and **2–10 minutes** on CMC301, or **Off** and **5–10 minutes** on normal3, in one-minute steps. Both models support **Completion notification**, which controls the Xiaomi Home completion push notification, separately from the buzzer. Phone delivery still depends on the Xiaomi service and app permissions. normal3 also provides **Lid open alarm** and **Lid-open keep-warm timeout**, with timeout options of 2, 4, 6, 8 and 10 minutes. normal3 settings can be changed while idle.
 
 Temperature comes from recorded temperature history when no direct reading is available; it is not an instantaneous heater or power measurement. Fine and quick rice show five cooking stages based on the official plugin's temperature-history method. Other recipes do not use that stage mapping. The single **Cooking stage** sensor includes a translated description attribute; the former stage-description entity is removed on reload.
 

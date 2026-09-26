@@ -124,3 +124,26 @@ async def test_default_taste_is_a_noop_but_tracks_connection(make_coordinator, c
     assert taste.current_option == "soft"
     coordinator.async_set_update_error(DeviceException("Offline"))
     assert not taste.available
+
+
+@pytest.mark.parametrize("cmc", [False, True])
+async def test_custom_candidates_remain_when_running_with_unknown_readback(
+    make_coordinator, cmc
+):
+    coordinator = make_coordinator(cmc)
+    selector = PanelRecipeSelect(coordinator, "panel_recipe")
+    candidates = selector.options
+    assert candidates
+    coordinator.async_set_updated_data(
+        replace(
+            coordinator.data,
+            status=replace(coordinator.data.status, status="running"),
+            properties={"panel_recipe_id": None},
+        )
+    )
+    assert selector.options == candidates and selector.current_option is None
+    assert selector.capability_attributes["options"] == candidates
+    assert not selector.available
+    with pytest.raises(HomeAssistantError):
+        await selector.async_select_option(candidates[0])
+    coordinator.api.set_panel_recipe.assert_not_called()

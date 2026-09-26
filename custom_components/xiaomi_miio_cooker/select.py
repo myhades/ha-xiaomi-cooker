@@ -88,14 +88,16 @@ class XiaomiCookerSelect(XiaomiMiioCookerEntity, SelectEntity):
     @property
     def current_option(self) -> str | None:
         """Return the currently selected option."""
-        return self.coordinator.displayed_menu
+        return self.coordinator.selected_cooking_menu or "none"
 
     @property
     def options(self) -> list[str]:
         """Return the available options."""
-        if self.coordinator.cooking_active:
-            return [self.current_option] if self.current_option is not None else []
-        return self.coordinator.cooking_menu_options
+        return ["none", *self.coordinator.cooking_menu_options]
+
+    @property
+    def available(self):
+        return super().available and not self.coordinator.cooking_active
 
     async def async_select_option(self, option: str) -> None:
         """Change the selected option."""
@@ -107,16 +109,18 @@ class RecipeTasteSelect(RecipeParameterEntity, SelectEntity):
     _attr_icon = "mdi:rice"
 
     @property
+    def available(self):
+        return super().available and not self.coordinator.cooking_active
+
+    @property
     def uses_default(self):
-        if self.coordinator.cooking_active:
-            return self.coordinator.displayed_menu not in (None, "other", "jingzhu")
         return not self.coordinator.supports_option("taste")
 
     @property
     def current_option(self):
         if self.uses_default:
             return "default"
-        value = self.coordinator.displayed_parameter("taste")
+        value = getattr(self.coordinator.recipe_options, "taste", None)
         return (
             self._attr_options[value] if type(value) is int and 0 <= value < 3 else None
         )
@@ -125,11 +129,11 @@ class RecipeTasteSelect(RecipeParameterEntity, SelectEntity):
     def options(self):
         if self.uses_default:
             return ["default"]
-        if self.coordinator.cooking_active:
-            return [self.current_option] if self.current_option is not None else []
         return self._attr_options
 
     async def async_select_option(self, option):
+        if self.coordinator.cooking_active:
+            raise validation_error("cooker_busy")
         if option == "default" and self.uses_default:
             return
         if self.uses_default:
@@ -144,21 +148,19 @@ class RecipeDurationSelect(RecipeParameterEntity, SelectEntity):
 
     @property
     def available(self):
-        return super().available and (
-            self.current_option is not None
-            if self.coordinator.cooking_active
-            else self.coordinator.supports_option("duration")
+        return (
+            super().available
+            and not self.coordinator.cooking_active
+            and self.coordinator.supports_option("duration")
         )
 
     @property
     def options(self):
-        if self.coordinator.cooking_active:
-            return [self.current_option] if self.current_option is not None else []
         return self.coordinator.cooking_duration_options
 
     @property
     def current_option(self):
-        value = self.coordinator.displayed_parameter("duration")
+        value = getattr(self.coordinator.recipe_options, "duration", None)
         return str(value) if value is not None else None
 
     async def async_select_option(self, option):
@@ -207,6 +209,10 @@ class PanelSleepSelect(CookerPropertyEntity, SelectEntity):
 
 class PanelRecipeSelect(CookerPropertyEntity, SelectEntity):
     @property
+    def available(self):
+        return super().available and not self.coordinator.cooking_active
+
+    @property
     def current_option(self):
         value = self.coordinator.data.properties.get("panel_recipe_id")
         if type(value) is not int:
@@ -220,8 +226,6 @@ class PanelRecipeSelect(CookerPropertyEntity, SelectEntity):
 
     @property
     def options(self):
-        if self.coordinator.cooking_active:
-            return [self.current_option] if self.current_option is not None else []
         recipes = self.coordinator.panel_recipe_options
         current = self.current_option
         return (

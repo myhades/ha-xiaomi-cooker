@@ -33,7 +33,7 @@ from custom_components.xiaomi_miio_cooker.switch import (
 
 
 @pytest.mark.parametrize("cmc", [False, True])
-async def test_selectors_show_live_feedback_without_arming_start(
+async def test_running_feedback_uses_sensors_and_disables_controls(
     hass, make_coordinator, cmc
 ):
     coordinator = make_coordinator(cmc)
@@ -54,12 +54,16 @@ async def test_selectors_show_live_feedback_without_arming_start(
         properties={**coordinator.data.properties, "texture": 2},
     )
     coordinator.async_set_updated_data(snapshot)
-    assert menu.current_option == "jingzhu"
-    assert menu.options == ["jingzhu"]
-    assert taste.available and taste.current_option == "hard"
-    assert taste.options == ["hard"]
-    assert duration.available and duration.current_option == "63"
-    assert duration.options == ["63"]  # Device value need not lie on the editing grid.
+    assert not menu.available and not taste.available and not duration.available
+    assert menu.current_option == "none" and "jingzhu" in menu.options
+    sensors = {e.entity_description.key: e for e in entities["sensor"]}
+    assert sensors["current_menu"].native_value == "jingzhu"
+    assert sensors["current_taste"].native_value == "hard"
+    assert sensors["current_duration"].native_value == 63
+    assert sensors["current_menu"].device_class == "enum"
+    assert "jingzhu" in sensors["current_menu"].capability_attributes["options"]
+    assert menu.capability_attributes["options"] == menu.options
+    assert entities["button"][1].available
     assert coordinator.selected_recipe is None and not start.available
     for operation in (
         menu.async_select_option("kuaizhu"),
@@ -76,7 +80,7 @@ async def test_selectors_show_live_feedback_without_arming_start(
     coordinator.async_set_updated_data(
         replace(snapshot, status=replace(snapshot.status, status="idle"))
     )
-    assert menu.current_option is None and taste.available and not duration.available
+    assert menu.current_option == "none" and taste.available and not duration.available
     await menu.async_select_option("jingzhu")
     assert start.available and duration.current_option == "60"
 
@@ -125,7 +129,7 @@ async def test_auto_keep_warm_follows_selector_and_connection(hass, make_coordin
     menu = entities["select"][0]
     warm = next(e for e in entities["switch"] if e.key == "next_auto_keep_warm")
     assert not warm.available and warm.is_on is None
-    unsupported = {"baowen", "cake", "noodles", "yoghurt"}
+    unsupported = {"none", "baowen", "cake", "noodles", "yoghurt"}
     for recipe in menu.options:
         await menu.async_select_option(recipe)
         assert warm.available == (recipe not in unsupported)
@@ -147,7 +151,7 @@ async def test_auto_keep_warm_follows_selector_and_connection(hass, make_coordin
     await menu.async_select_option("kuaizhu")
     assert warm.available and warm.is_on is True
     await coordinator.async_start_selected_profile()
-    assert menu.current_option is None
+    assert menu.current_option == "none"
     assert coordinator.recipe_options is None
     assert not warm.available and warm.is_on is None
     sent = decode_profile(coordinator.api.start.call_args.args[0])
@@ -303,3 +307,52 @@ def test_translations_have_matching_keys_and_placeholders():
             )
         if language == "en":
             assert translated == source
+
+
+async def test_cancel_selection_and_stop_availability(hass, make_coordinator):
+    coordinator = make_coordinator()
+    entities = await setup_platforms(hass, coordinator)
+    menu = entities["select"][0]
+    start, stop = entities["button"]
+    assert menu.current_option == "none" and not start.available and not stop.available
+    with pytest.raises(HomeAssistantError):
+        await stop.async_press()
+    coordinator.api.stop.assert_not_called()
+    await menu.async_select_option("zhuzhou")
+    coordinator.set_recipe_option("duration", 120)
+    assert start.available and not stop.available
+    await menu.async_select_option("none")
+    assert coordinator.recipe_options is None and not start.available
+    assert menu.current_option == "none"
+
+
+async def test_fault_enum_keeps_raw_code_and_handles_future_values(
+    hass, make_coordinator
+):
+    coordinator = make_coordinator()
+    entities = await setup_platforms(hass, coordinator)
+    sensors = {e.entity_description.key: e for e in entities["sensor"]}
+    fault = sensors["fault"]
+    assert fault.device_class == "enum"
+    assert fault.capability_attributes["options"] == [
+        "none",
+        "top_sensor",
+        "bottom_sensor",
+        "communication",
+        "other",
+    ]
+    for code, value in [
+        (0, "none"),
+        (5, "top_sensor"),
+        (6, "bottom_sensor"),
+        (7, "communication"),
+        (255, "other"),
+        (None, None),
+    ]:
+        coordinator.async_set_updated_data(
+            replace(coordinator.data, properties={"fault": code})
+        )
+        assert fault.native_value == value
+        assert fault.extra_state_attributes == {"code": code}
+    for key in ("current_menu", "current_taste", "current_duration"):
+        assert sensors[key].native_value is None
