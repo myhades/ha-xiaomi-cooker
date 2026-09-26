@@ -147,8 +147,11 @@ async def test_fine_taste_requires_selected_recipe_and_connection(
     coordinator.api.set_setting.assert_not_called()
     await coordinator.async_select_cooking_menu("jingzhu")
     assert "default" not in taste.options
+    assert taste.current_option == "middle"
     await taste.async_select_option("soft")
     assert taste.current_option == "soft"
+    await coordinator.async_select_cooking_menu("jingzhu")
+    assert taste.current_option == "middle"
     coordinator.async_set_update_error(DeviceException("Offline"))
     assert not taste.available
 

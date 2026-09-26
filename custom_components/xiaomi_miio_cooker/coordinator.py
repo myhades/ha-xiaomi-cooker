@@ -283,9 +283,10 @@ class XiaomiMiioCookerCoordinator(DataUpdateCoordinator[CookerData]):
         """Update the shared selector and its dependent draft together."""
         options = None
         if option is not None and self.recipe_codec is not None:
-            options = self.recipe_codec.default_options(
-                self._profiles_by_key[option].profile
-            )
+            profile = self._profiles_by_key[option].profile
+            options = self.recipe_codec.default_options(profile)
+            if self.recipe_codec.supports_option(profile, "taste"):
+                options = replace(options, taste=1)
         self._selected_profile = option
         self.recipe_options = options
         self._selection_revision += 1
