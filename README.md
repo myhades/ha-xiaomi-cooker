@@ -89,7 +89,7 @@ Temperature comes from recorded temperature history when no direct reading is av
 
 **Status** distinguishes `automatic_keep_warm` from manual `keep_warm` on both models. **Current menu** retains the preceding recipe during automatic keep-warm and shows the keep-warm recipe for manual operation. **Current duration** shows the current phase's total minutes: the device's cooking or manual keep-warm duration, or the 1440-minute automatic keep-warm limit documented by both official plugins. Missing or ambiguous feedback remains unknown.
 
-**Remaining time** uses whole minutes: time remaining during cooking, time elapsed during keep-warm, distinguished by its `time_direction` attribute (`remaining` or `elapsed`). CMC301 rounds remaining minutes up and elapsed minutes down; normal3 keeps the device's minute readings.
+**Remaining time** uses whole minutes: time remaining during cooking, time elapsed during keep-warm, distinguished by its `time_direction` attribute (`remaining` or `elapsed`). CMC301 rounds remaining minutes up and elapsed minutes down; normal3 keeps the device's minute readings during cooking and keep-warm. While scheduled, normal3 uses the reported local completion time and HA's configured time zone to calculate minutes until completion, including reservations started in the app or on the panel. Missing or ambiguous completion times remain unknown. Current duration is the cooking duration, not the original reservation duration.
 
 ## Actions
 

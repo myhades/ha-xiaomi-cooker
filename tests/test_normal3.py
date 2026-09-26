@@ -255,6 +255,73 @@ def test_readbacks_and_optional_push_failure(device_backend):
     )
 
 
+async def test_external_schedule_feedback_uses_ha_clock(
+    device_backend, make_coordinator, monkeypatch
+):
+    backend, transport = device_backend
+    transport.values[0] = "precook"
+    transport.values[5] = "60"  # 01:00 completion, including a start outside HA.
+    coordinator = make_coordinator(False)
+    coordinator.api.fetch_data = backend.fetch_data
+    moments = iter(
+        [
+            datetime(2026, 9, 27, 23, 30, 15, tzinfo=ZoneInfo("Asia/Shanghai")),
+            datetime(2026, 9, 28, 0, 30, 15, tzinfo=ZoneInfo("Asia/Shanghai")),
+        ]
+    )
+
+    def clock(zone):
+        assert zone == coordinator.hass.config.time_zone
+        return next(moments)
+
+    monkeypatch.setattr(normal3, "schedule_local_now", clock)
+    for expected in (90, 30):
+        snapshot = await coordinator._async_update_data()
+        assert snapshot.status.remaining == expected
+        assert snapshot.status.duration == 60
+        assert snapshot.properties["time_direction"] == "remaining"
+        assert coordinator.selected_recipe is None
+    transport.values[5] = "-1"
+    monkeypatch.setattr(
+        normal3, "schedule_local_now", lambda _: datetime.now(ZoneInfo("UTC"))
+    )
+    assert (await coordinator._async_update_data()).status.remaining is None
+    transport.values[0] = "running"
+    transport.values[1] = "0003"  # Non-rice cooking does not request phase history.
+    assert (await coordinator._async_update_data()).status.remaining == 60
+    assert all(
+        method in {"get_prop", "get_setting"} for method, _, _ in transport.calls
+    )
+
+
+@pytest.mark.parametrize(
+    "finish,expected",
+    [
+        ("60", 90),
+        (1500, 90),
+        ("1440", 30),
+        (1410, 0),
+        (-1, None),
+        ("-1", None),
+        (None, None),
+        (True, None),
+        (1.5, None),
+        ("bad", None),
+        (2880, None),
+    ],
+)
+def test_scheduled_remaining_clock_validation(finish, expected):
+    now = datetime(2026, 9, 27, 23, 30, 59, tzinfo=ZoneInfo("Asia/Shanghai"))
+    assert normal3.scheduled_remaining(finish, now) == expected
+
+
+def test_scheduled_remaining_does_not_guess_dst_or_naive_clock():
+    assert normal3.scheduled_remaining(240, datetime(2026, 3, 29)) is None
+    for month, day in ((3, 29), (10, 25)):
+        now = datetime(2026, month, day, 0, tzinfo=ZoneInfo("Europe/Berlin"))
+        assert normal3.scheduled_remaining(240, now) is None
+
+
 @pytest.mark.parametrize(
     "key,value",
     [

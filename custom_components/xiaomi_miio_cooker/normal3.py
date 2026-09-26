@@ -169,6 +169,31 @@ def schedule_local_now(time_zone: str) -> datetime:
         ) from err
 
 
+def scheduled_remaining(finish_clock: Any, now: datetime) -> int | None:
+    """Convert plugin 11030's t_pre completion clock to whole minutes left."""
+    if isinstance(finish_clock, str) and re.fullmatch(r"[0-9]+", finish_clock):
+        finish_clock = int(finish_clock)
+    if (
+        type(finish_clock) is not int
+        or not 0 <= finish_clock < 2880
+        or now.utcoffset() is None
+    ):
+        return None
+    remaining = finish_clock - (now.hour * 60 + now.minute)
+    if remaining < 0:
+        remaining += 1440
+    target = now + timedelta(minutes=remaining)
+    # No date/UTC offset is reported. Do not guess during a clock change.
+    if (
+        now.utcoffset() != target.utcoffset()
+        or now.replace(fold=0).utcoffset() != now.replace(fold=1).utcoffset()
+        or target.replace(fold=0).utcoffset() != target.replace(fold=1).utcoffset()
+    ):
+        return None
+    # Subtracting minute clocks equals rounding the remaining seconds up.
+    return remaining
+
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -309,6 +334,10 @@ class Normal3Backend:
         status = _build_status_data(raw_status, self.metadata.model)
         raw_data = getattr(raw_status, "data", {}) or {}
         normal3 = self.metadata.model == MODEL_NORMAL3
+        if normal3 and status.status == "scheduled":
+            # t_func is not the reservation countdown. The HA layer resolves
+            # t_precook using its configured timezone, regardless of who started it.
+            status = replace(status, remaining=None)
         # normal3 plugin 11030 shows curve phases only for rice while running.
         show_rice_phase = (
             normal3 and raw_data.get("func") == "running" and status.menu in (1, 2)
@@ -349,6 +378,7 @@ class Normal3Backend:
             else None,
         }
         if normal3:
+            properties["scheduled_finish_clock"] = raw_data.get("t_precook")
             # Plugin 11030 treats menu 4 as a manual keep-warm program;
             # autokeepwarm on another menu is the post-cooking phase.
             warming = status.status == "keep_warm" or (

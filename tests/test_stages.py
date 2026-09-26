@@ -305,7 +305,7 @@ def test_normal3_warm_type_and_completion_preserve_device_minutes():
             return_value=TemperatureHistory("0")
         )
         data = backend.fetch_data()
-        assert data.status.remaining == 10
+        assert data.status.remaining == (None if func == "precook" else 10)
         assert data.properties["keep_warm_type"] == kind
         assert data.properties["cooking_finished"] is finished
         assert data.properties["time_direction"] == (

@@ -261,6 +261,23 @@ class XiaomiMiioCookerCoordinator(DataUpdateCoordinator[CookerData]):
         """Fetch the latest cooker state."""
         try:
             snapshot = await self.hass.async_add_executor_job(self.api.fetch_data)
+            if (
+                self.config_entry.data.get("model") == MODEL_NORMAL3
+                and snapshot.status.status == "scheduled"
+            ):
+                remaining = None
+                try:
+                    remaining = normal3.scheduled_remaining(
+                        snapshot.properties.get("scheduled_finish_clock"),
+                        normal3.schedule_local_now(self.hass.config.time_zone),
+                    )
+                except ValueError:
+                    _LOGGER.debug(
+                        "Unable to resolve the configured scheduling timezone"
+                    )
+                snapshot = replace(
+                    snapshot, status=replace(snapshot.status, remaining=remaining)
+                )
             if _LOGGER.isEnabledFor(logging.DEBUG):
                 values = {
                     key: snapshot.properties[key]
