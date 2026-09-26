@@ -155,10 +155,14 @@ class XiaomiMiioCookerCoordinator(DataUpdateCoordinator[CookerData]):
             raise validation_error("cooker_busy")
         await self._async_execute_command(self.api.set_setting, key, value)
 
+    @property
+    def panel_recipe_writable(self) -> bool:
+        return self.data is not None and self.data.status.status == "idle"
+
     async def async_select_panel_recipe(self, recipe: str) -> None:
         if recipe not in self.panel_recipe_options:
             raise validation_error("unsupported_recipe")
-        if self.cooking_active:
+        if not self.panel_recipe_writable:
             raise validation_error("cooker_busy")
         await self._async_execute_command(
             self.api.set_panel_recipe, self._profiles_by_key[recipe].profile

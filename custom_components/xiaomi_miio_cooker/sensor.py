@@ -32,7 +32,15 @@ from .stages import RICE_PHASES
 
 CAMEL_CASE_PATTERN = re.compile(r"(?<!^)(?=[A-Z])")
 MODE_OPTIONS = ("unknown", "fine_cook", "quick_cook", "cook_congee", "keep_warm")
-STATUS_OPTIONS = ("unknown", "idle", "running", "keep_warm", "busy")
+STATUS_OPTIONS = (
+    "unknown",
+    "idle",
+    "running",
+    "keep_warm",
+    "busy",
+    "scheduled",
+    "error",
+)
 BOOLEAN_OPTIONS = ("off", "on")
 
 
@@ -231,7 +239,7 @@ async def async_setup_entry(
             translation_key="current_taste",
             attribute_name="taste",
             device_class=SensorDeviceClass.ENUM,
-            enum_options=("soft", "middle", "hard", "default"),
+            enum_options=("soft", "middle", "hard"),
             icon="mdi:rice",
         ),
         XiaomiCookerSensorDescription(
@@ -355,8 +363,8 @@ class XiaomiCookerSensor(XiaomiMiioCookerEntity, SensorEntity):
             if key == "current_duration":
                 return data.status.duration
             menu = self.coordinator.displayed_menu
-            if menu not in (None, "other", "jingzhu"):
-                return "default"
+            if menu != "jingzhu" or data.status.status != "running":
+                return None
             return {0: "soft", 1: "middle", 2: "hard"}.get(
                 self.coordinator.displayed_parameter("taste")
             )
@@ -477,8 +485,6 @@ def cmc301_descriptions():
                 description,
                 enum_options=(
                     *STATUS_OPTIONS,
-                    "scheduled",
-                    "error",
                     "updating",
                     "completed",
                 ),

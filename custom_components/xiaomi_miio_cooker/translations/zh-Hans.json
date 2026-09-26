@@ -64,12 +64,11 @@
         }
       },
       "next_taste": {
-        "name": "口感",
+        "name": "精煮口感",
         "state": {
           "soft": "偏软",
           "middle": "适中",
-          "hard": "偏硬",
-          "default": "默认"
+          "hard": "偏硬"
         }
       },
       "next_duration": {
@@ -148,7 +147,7 @@
           "idle": "待机中",
           "running": "烹饪中",
           "keep_warm": "保温中",
-          "busy": "预约中",
+          "busy": "忙碌",
           "scheduled": "预约烹饪中",
           "error": "故障",
           "updating": "升级中",
@@ -294,12 +293,11 @@
         }
       },
       "current_taste": {
-        "name": "当前口感",
+        "name": "精煮口感",
         "state": {
           "soft": "偏软",
           "middle": "适中",
-          "hard": "偏硬",
-          "default": "默认"
+          "hard": "偏硬"
         }
       },
       "current_duration": {
@@ -326,9 +324,6 @@
       },
       "completion_notification": {
         "name": "完成推送"
-      },
-      "buzzer": {
-        "name": "响铃"
       },
       "lid_open_warning": {
         "name": "开盖超时报警"

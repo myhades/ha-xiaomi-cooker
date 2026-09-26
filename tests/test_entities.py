@@ -24,6 +24,7 @@ from custom_components.xiaomi_miio_cooker.const import MODEL_CMC301, MODEL_NORMA
 from custom_components.xiaomi_miio_cooker.models import CookerStageData
 from custom_components.xiaomi_miio_cooker.select import (
     LidTimeoutSelect,
+    PanelRecipeSelect,
     PanelSleepSelect,
 )
 from custom_components.xiaomi_miio_cooker.switch import (
@@ -60,6 +61,15 @@ async def test_running_feedback_uses_sensors_and_disables_controls(
     assert sensors["current_menu"].native_value == "jingzhu"
     assert sensors["current_taste"].native_value == "hard"
     assert sensors["current_duration"].native_value == 63
+    coordinator.async_set_updated_data(
+        replace(snapshot, status=replace(snapshot.status, menu=3))
+    )
+    assert sensors["current_taste"].native_value is None
+    coordinator.async_set_updated_data(
+        replace(snapshot, status=replace(snapshot.status, status="keep_warm"))
+    )
+    assert sensors["current_taste"].native_value is None
+    coordinator.async_set_updated_data(snapshot)
     assert sensors["current_menu"].device_class == "enum"
     assert "jingzhu" in sensors["current_menu"].capability_attributes["options"]
     assert menu.capability_attributes["options"] == menu.options
@@ -80,7 +90,9 @@ async def test_running_feedback_uses_sensors_and_disables_controls(
     coordinator.async_set_updated_data(
         replace(snapshot, status=replace(snapshot.status, status="idle"))
     )
-    assert menu.current_option == "none" and taste.available and not duration.available
+    assert (
+        menu.current_option == "none" and not taste.available and not duration.available
+    )
     await menu.async_select_option("jingzhu")
     assert start.available and duration.current_option == "60"
 
@@ -215,7 +227,7 @@ async def test_keep_warm_live_feedback_never_uses_draft(
         )
     )
     assert warm.is_on is (reported if type(reported) is bool else None)
-    assert warm.available == (type(reported) is bool)
+    assert not warm.available
     assert warm.extra_state_attributes == {"read_only": True}
     for action in (warm.async_turn_on, warm.async_turn_off):
         with pytest.raises(HomeAssistantError):
@@ -225,7 +237,9 @@ async def test_keep_warm_live_feedback_never_uses_draft(
     assert not warm.available
 
 
-@pytest.mark.parametrize("state", ["running", "keep_warm", "unknown"])
+@pytest.mark.parametrize(
+    "state", ["running", "keep_warm", "scheduled", "error", "unknown"]
+)
 async def test_normal3_settings_disabled_before_command(make_coordinator, state):
     c = make_coordinator(False)
     snapshot = replace(
@@ -235,6 +249,7 @@ async def test_normal3_settings_disabled_before_command(make_coordinator, state)
             "display_timeout": 5,
             "lid_open_timeout": 4,
             "completion_notification": False,
+            "lid_open_warning": True,
         },
     )
     c.async_set_updated_data(snapshot)
@@ -242,6 +257,8 @@ async def test_normal3_settings_disabled_before_command(make_coordinator, state)
         PanelSleepSelect(c, "panel_auto_off"),
         LidTimeoutSelect(c, "lid_open_timeout"),
         CookerSettingSwitch(c, "completion_notification"),
+        CookerSettingSwitch(c, "lid_open_warning"),
+        PanelRecipeSelect(c, "panel_recipe"),
     ]
     assert all(e.available for e in controls)
     c.async_set_updated_data(
@@ -250,7 +267,10 @@ async def test_normal3_settings_disabled_before_command(make_coordinator, state)
     assert all(not e.available for e in controls)
     with pytest.raises(HomeAssistantError):
         await c.async_set_setting("completion_notification", True)
+    with pytest.raises(HomeAssistantError):
+        await c.async_select_panel_recipe(c.panel_recipe_options[0])
     c.api.set_setting.assert_not_called()
+    c.api.set_panel_recipe.assert_not_called()
     c.async_set_updated_data(snapshot)
     assert all(e.available for e in controls)
 
@@ -268,6 +288,8 @@ async def test_stage_migration_preserves_name_and_other_entries(
         if uid == "device_recipe_type"
         else "switch.old_lights"
         if domain == "switch" and uid == "device_all_modes_lit"
+        else "switch.old_buzzer"
+        if domain == "switch" and uid == "device_buzzer"
         else None
     )
     registry.async_get.return_value = SimpleNamespace(
@@ -280,7 +302,7 @@ async def test_stage_migration_preserves_name_and_other_entries(
         hass, SimpleNamespace(entry_id="ours"), "device", model
     )
     assert registry.async_remove.call_count == int(same_entry) * (
-        3 if model == MODEL_CMC301 else 1
+        4 if model == MODEL_CMC301 else 1
     )
     assert all(
         call.args[2] != "device_stage_name"

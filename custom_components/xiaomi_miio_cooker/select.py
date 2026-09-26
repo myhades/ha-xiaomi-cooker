@@ -114,35 +114,23 @@ class RecipeTasteSelect(RecipeParameterEntity, SelectEntity):
 
     @property
     def available(self):
-        return super().available and not self.coordinator.cooking_active
-
-    @property
-    def uses_default(self):
-        return not self.coordinator.supports_option("taste")
+        return (
+            super().available
+            and not self.coordinator.cooking_active
+            and self.coordinator.supports_option("taste")
+        )
 
     @property
     def current_option(self):
-        if self.uses_default:
-            return "default"
+        if not self.coordinator.supports_option("taste"):
+            return None
         value = getattr(self.coordinator.recipe_options, "taste", None)
         return (
             self._attr_options[value] if type(value) is int and 0 <= value < 3 else None
         )
 
-    @property
-    def options(self):
-        if self.uses_default:
-            return ["default"]
-        return self._attr_options
-
     async def async_select_option(self, option):
-        if self.coordinator.cooking_active:
-            raise validation_error("cooker_busy")
-        if option == "default" and self.uses_default:
-            return
-        if self.uses_default:
-            raise validation_error("invalid_taste")
-        if option not in self._attr_options:
+        if option not in self.options:
             raise validation_error("invalid_taste")
         self.coordinator.set_recipe_option("taste", self._attr_options.index(option))
 
@@ -241,7 +229,7 @@ class PanelRecipeLightsSelect(CookerPropertyEntity, SelectEntity):
 class PanelRecipeSelect(CookerPropertyEntity, SelectEntity):
     @property
     def available(self):
-        return super().available and not self.coordinator.cooking_active
+        return super().available and self.coordinator.panel_recipe_writable
 
     @property
     def current_option(self):

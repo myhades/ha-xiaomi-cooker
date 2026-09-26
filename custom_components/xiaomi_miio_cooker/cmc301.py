@@ -148,7 +148,6 @@ PROPERTIES = {
     "boiling": (2, 29),
     "recipe_type": (2, 30),
     "reset_flag": (2, 31),
-    "buzzer": (2, 32),
     "remote_control": (7, 1),
 }
 STATES = {
@@ -366,25 +365,6 @@ class Cmc301Backend:
             )
 
     def set_setting(self, key: str, value) -> None:
-        if key == "buzzer":
-            if type(value) is not bool:
-                raise ValueError("Buzzer must be a boolean")
-            result = self.device.send(
-                "set_properties",
-                [{"did": "miot", "siid": 2, "piid": 32, "value": value}],
-                retry_count=0,
-            )
-            if (
-                not isinstance(result, list)
-                or len(result) != 1
-                or result[0].get("code") != 0
-            ):
-                raise CookerCommandError("write_unconfirmed", "Buzzer write failed")
-            if self._read({key: PROPERTIES[key]})[key] != value:
-                raise CookerCommandError(
-                    "write_unconfirmed", "Buzzer write was not confirmed"
-                )
-            return
         fields = {
             "panel_auto_off": (0, True),
             "completion_notification": (2, True),

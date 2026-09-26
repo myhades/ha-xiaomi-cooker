@@ -131,15 +131,16 @@ async def test_panel_selectors_readback_and_no_other_write(make_coordinator):
 
 
 @pytest.mark.parametrize("cmc", [False, True])
-async def test_default_taste_is_a_noop_but_tracks_connection(make_coordinator, cmc):
+async def test_fine_taste_requires_selected_recipe_and_connection(
+    make_coordinator, cmc
+):
     coordinator = make_coordinator(cmc)
     taste = RecipeTasteSelect(coordinator, "next_taste")
     for recipe in (None, "kuaizhu", "zhuzhou"):
         if recipe is not None:
             await coordinator.async_select_cooking_menu(recipe)
-        assert taste.available and taste.current_option == "default"
-        assert taste.options == ["default"]
-        await taste.async_select_option("default")
+        assert not taste.available and taste.current_option is None
+        assert taste.options == ["soft", "middle", "hard"]
         with pytest.raises(HomeAssistantError):
             await taste.async_select_option("soft")
     coordinator.api.start.assert_not_called()
@@ -153,9 +154,11 @@ async def test_default_taste_is_a_noop_but_tracks_connection(make_coordinator, c
 
 
 @pytest.mark.parametrize("cmc", [False, True])
-async def test_custom_candidates_remain_when_running_with_unknown_readback(
-    make_coordinator, cmc
-):
+@pytest.mark.parametrize(
+    "state",
+    ["running", "keep_warm", "scheduled", "completed", "error", "updating", "unknown"],
+)
+async def test_custom_candidates_remain_when_not_idle(make_coordinator, cmc, state):
     coordinator = make_coordinator(cmc)
     selector = PanelRecipeSelect(coordinator, "panel_recipe")
     candidates = selector.options
@@ -163,7 +166,7 @@ async def test_custom_candidates_remain_when_running_with_unknown_readback(
     coordinator.async_set_updated_data(
         replace(
             coordinator.data,
-            status=replace(coordinator.data.status, status="running"),
+            status=replace(coordinator.data.status, status=state),
             properties={"panel_recipe_id": None},
         )
     )

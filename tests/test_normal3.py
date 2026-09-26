@@ -52,11 +52,11 @@ def test_normal3_wire_start_stop_unchanged():
         ("waiting", "idle"),
         ("running", "running"),
         ("autokeepwarm", "keep_warm"),
-        ("precook", "busy"),
-        ("error", "unknown"),
+        ("precook", "scheduled"),
+        ("error", "error"),
     ],
 )
-def test_existing_state_contract(func, state):
+def test_plugin_state_mapping(func, state):
     status = SimpleNamespace(
         data={"func": func, "menu": "0001"},
         remaining=10,

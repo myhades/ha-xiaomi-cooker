@@ -25,7 +25,6 @@ SAFE_PROPERTIES = {
     "stage_source",
     "stage_raw",
     "history_phase_index",
-    "buzzer",
     "panel_auto_off",
     "completion_notification",
     "all_modes_lit",

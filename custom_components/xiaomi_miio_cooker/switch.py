@@ -22,7 +22,7 @@ async def async_setup_entry(
         async_add_entities([RecipeKeepWarmSwitch(coordinator, "next_auto_keep_warm")])
     if coordinator.recipe_codec is not None:
         keys = (
-            ("completion_notification", "buzzer")
+            ("completion_notification",)
             if coordinator.is_cmc301
             else ("completion_notification", "lid_open_warning")
         )
@@ -32,8 +32,7 @@ async def async_setup_entry(
 class CookerSettingSwitch(CookerPropertyEntity, SwitchEntity):
     def __init__(self, coordinator, key):
         super().__init__(coordinator, key)
-        if key != "buzzer":
-            self._attr_entity_category = EntityCategory.CONFIG
+        self._attr_entity_category = EntityCategory.CONFIG
 
     @property
     def available(self):
@@ -60,10 +59,11 @@ class CookerSettingSwitch(CookerPropertyEntity, SwitchEntity):
 class RecipeKeepWarmSwitch(RecipeParameterEntity, SwitchEntity):
     @property
     def available(self):
-        return super().available and (
-            self.is_on is not None
-            if self.coordinator.cooking_active
-            else self.coordinator.supports_option("auto_keep_warm")
+        return (
+            super().available
+            and not self.coordinator.cooking_active
+            and self.coordinator.settings_writable
+            and self.coordinator.supports_option("auto_keep_warm")
         )
 
     @property

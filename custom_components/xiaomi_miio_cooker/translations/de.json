@@ -64,12 +64,11 @@
         }
       },
       "next_taste": {
-        "name": "Konsistenz",
+        "name": "Konsistenz für Feinreis",
         "state": {
           "soft": "Weich",
           "middle": "Mittel",
-          "hard": "Fest",
-          "default": "Standard"
+          "hard": "Fest"
         }
       },
       "next_duration": {
@@ -148,7 +147,7 @@
           "idle": "Bereit",
           "running": "Kochen",
           "keep_warm": "Warmhalten",
-          "busy": "Geplant",
+          "busy": "Beschäftigt",
           "scheduled": "Geplantes Kochen",
           "error": "Fehler",
           "updating": "Aktualisierung läuft",
@@ -294,12 +293,11 @@
         }
       },
       "current_taste": {
-        "name": "Aktuelle Konsistenz",
+        "name": "Konsistenz für Feinreis",
         "state": {
           "soft": "Weich",
           "middle": "Mittel",
-          "hard": "Fest",
-          "default": "Standard"
+          "hard": "Fest"
         }
       },
       "current_duration": {
@@ -326,9 +324,6 @@
       },
       "completion_notification": {
         "name": "Fertigmeldung"
-      },
-      "buzzer": {
-        "name": "Signalton"
       },
       "lid_open_warning": {
         "name": "Deckelalarm"

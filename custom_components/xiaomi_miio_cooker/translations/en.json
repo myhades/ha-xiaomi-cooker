@@ -64,12 +64,11 @@
         }
       },
       "next_taste": {
-        "name": "Taste",
+        "name": "Fine rice taste",
         "state": {
           "soft": "Soft",
           "middle": "Medium",
-          "hard": "Hard",
-          "default": "Default"
+          "hard": "Hard"
         }
       },
       "next_duration": {
@@ -148,7 +147,7 @@
           "idle": "Idle",
           "running": "Cooking",
           "keep_warm": "Keep warm",
-          "busy": "Scheduled",
+          "busy": "Busy",
           "scheduled": "Scheduled cooking",
           "error": "Error",
           "updating": "Updating",
@@ -294,12 +293,11 @@
         }
       },
       "current_taste": {
-        "name": "Current taste",
+        "name": "Fine rice taste",
         "state": {
           "soft": "Soft",
           "middle": "Medium",
-          "hard": "Hard",
-          "default": "Default"
+          "hard": "Hard"
         }
       },
       "current_duration": {
@@ -326,9 +324,6 @@
       },
       "completion_notification": {
         "name": "Completion notification"
-      },
-      "buzzer": {
-        "name": "Buzzer"
       },
       "lid_open_warning": {
         "name": "Lid open alarm"
