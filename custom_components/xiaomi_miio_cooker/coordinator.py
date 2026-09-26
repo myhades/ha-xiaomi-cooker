@@ -20,6 +20,7 @@ from .const import (
     DOMAIN,
     MODEL_CMC301,
     MODEL_NORMAL3,
+    RAW_DIAGNOSTIC_PROPERTIES,
 )
 from .contracts import RecipeCodec
 from .errors import command_error, recipe_error, validation_error
@@ -224,7 +225,19 @@ class XiaomiMiioCookerCoordinator(DataUpdateCoordinator[CookerData]):
     async def _async_update_data(self) -> CookerData:
         """Fetch the latest cooker state."""
         try:
-            return await self.hass.async_add_executor_job(self.api.fetch_data)
+            snapshot = await self.hass.async_add_executor_job(self.api.fetch_data)
+            if _LOGGER.isEnabledFor(logging.DEBUG):
+                values = {
+                    key: snapshot.properties[key]
+                    for key in (*RAW_DIAGNOSTIC_PROPERTIES, "fault")
+                    if key in snapshot.properties
+                }
+                _LOGGER.debug(
+                    "Cooker state: %s; protocol diagnostics: %s",
+                    snapshot.status.status,
+                    values,
+                )
+            return snapshot
         except UnsupportedModelError as err:
             raise UpdateFailed(f"Unsupported Xiaomi cooker model: {err}") from err
         except DeviceException as err:

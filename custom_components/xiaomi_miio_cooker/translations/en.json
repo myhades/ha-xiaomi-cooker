@@ -240,9 +240,9 @@
         }
       },
       "fault": {
-        "name": "Fault",
+        "name": "Error",
         "state": {
-          "none": "No fault",
+          "none": "None",
           "top_sensor": "Top sensor fault",
           "bottom_sensor": "Bottom sensor fault",
           "communication": "Communication fault",
@@ -254,21 +254,6 @@
           }
         }
       },
-      "recipe_id": {
-        "name": "Recipe ID"
-      },
-      "status_code": {
-        "name": "Raw status"
-      },
-      "mode_code": {
-        "name": "Raw mode"
-      },
-      "reset_flag": {
-        "name": "Reset synchronization flag"
-      },
-      "history_samples": {
-        "name": "Recorded temperature samples"
-      },
       "recorded_temperature": {
         "name": "Temperature"
       },
@@ -278,14 +263,6 @@
           "soft": "Soft",
           "middle": "Medium",
           "hard": "Hard"
-        }
-      },
-      "recipe_type": {
-        "name": "Recipe type",
-        "state": {
-          "official": "Official",
-          "cloud": "Cloud",
-          "custom": "Custom"
         }
       },
       "current_menu": {

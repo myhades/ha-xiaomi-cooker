@@ -22,6 +22,15 @@ COMMAND_REFRESH_DELAY = 2
 TEMPERATURE_HISTORY_MIN_INTERVAL_SECONDS = 120
 MANUFACTURER = "Xiaomi"
 
+RAW_DIAGNOSTIC_PROPERTIES = (
+    "recipe_id",
+    "recipe_type",
+    "status_code",
+    "mode_code",
+    "reset_flag",
+    "history_samples",
+)
+
 MODEL_PRESSURE1 = "chunmi.cooker.press1"
 MODEL_PRESSURE2 = "chunmi.cooker.press2"
 MODEL_NORMAL1 = "chunmi.cooker.normal1"

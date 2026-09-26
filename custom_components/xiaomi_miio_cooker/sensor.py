@@ -492,37 +492,16 @@ def cmc301_descriptions():
                 ),
             )
         descriptions.append(description)
-    for key in (
-        "fault",
-        "recipe_id",
-        "status_code",
-        "mode_code",
-        "reset_flag",
-        "history_samples",
-    ):
-        descriptions.append(
-            XiaomiCookerSensorDescription(
-                key=key,
-                translation_key=key,
-                attribute_name=key,
-                entity_category=EntityCategory.DIAGNOSTIC,
-                entity_registry_enabled_default=key == "fault",
-                device_class=SensorDeviceClass.ENUM if key == "fault" else None,
-                enum_options=(*FAULTS.values(), "other") if key == "fault" else None,
-                icon="mdi:alert-circle-outline" if key == "fault" else "mdi:code-tags",
-            )
-        )
     descriptions.extend(
         (
             XiaomiCookerSensorDescription(
-                key="recipe_type",
-                translation_key="recipe_type",
-                attribute_name="recipe_type",
-                device_class=SensorDeviceClass.ENUM,
-                enum_options=("official", "cloud", "custom"),
-                icon="mdi:book-open-variant",
+                key="fault",
+                translation_key="fault",
+                attribute_name="fault",
                 entity_category=EntityCategory.DIAGNOSTIC,
-                entity_registry_enabled_default=False,
+                device_class=SensorDeviceClass.ENUM,
+                enum_options=(*FAULTS.values(), "other"),
+                icon="mdi:alert-circle-outline",
             ),
             XiaomiCookerSensorDescription(
                 key="recorded_temperature",

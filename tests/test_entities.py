@@ -262,7 +262,11 @@ async def test_stage_migration_preserves_name_and_other_entries(
 ):
     registry = Mock()
     registry.async_get_entity_id.side_effect = lambda domain, platform, uid: (
-        "sensor.old_description" if uid == "device_stage_description" else None
+        "sensor.old_description"
+        if uid == "device_stage_description"
+        else "sensor.old_raw"
+        if uid == "device_recipe_type"
+        else None
     )
     registry.async_get.return_value = SimpleNamespace(
         config_entry_id="ours" if same_entry else "other"
@@ -273,7 +277,9 @@ async def test_stage_migration_preserves_name_and_other_entries(
     _remove_replaced_duration_number(
         hass, SimpleNamespace(entry_id="ours"), "device", model
     )
-    assert registry.async_remove.call_count == int(same_entry)
+    assert registry.async_remove.call_count == int(same_entry) * (
+        2 if model == MODEL_CMC301 else 1
+    )
     assert all(
         call.args[2] != "device_stage_name"
         for call in registry.async_get_entity_id.call_args_list
@@ -333,6 +339,9 @@ async def test_fault_enum_keeps_raw_code_and_handles_future_values(
     entities = await setup_platforms(hass, coordinator)
     sensors = {e.entity_description.key: e for e in entities["sensor"]}
     fault = sensors["fault"]
+    assert [
+        key for key, entity in sensors.items() if entity.entity_category == "diagnostic"
+    ] == ["fault"]
     assert fault.device_class == "enum"
     assert fault.capability_attributes["options"] == [
         "none",

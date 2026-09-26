@@ -240,9 +240,9 @@
         }
       },
       "fault": {
-        "name": "故障",
+        "name": "错误",
         "state": {
-          "none": "无故障",
+          "none": "无",
           "top_sensor": "顶部传感器故障",
           "bottom_sensor": "底部传感器故障",
           "communication": "通信故障",
@@ -254,21 +254,6 @@
           }
         }
       },
-      "recipe_id": {
-        "name": "食谱编号"
-      },
-      "status_code": {
-        "name": "原始工作状态"
-      },
-      "mode_code": {
-        "name": "原始模式"
-      },
-      "reset_flag": {
-        "name": "重置同步标志"
-      },
-      "history_samples": {
-        "name": "温度历史样本数"
-      },
       "recorded_temperature": {
         "name": "温度"
       },
@@ -278,14 +263,6 @@
           "soft": "偏软",
           "middle": "适中",
           "hard": "偏硬"
-        }
-      },
-      "recipe_type": {
-        "name": "食谱类型",
-        "state": {
-          "official": "官方",
-          "cloud": "云端",
-          "custom": "自定义"
         }
       },
       "current_menu": {

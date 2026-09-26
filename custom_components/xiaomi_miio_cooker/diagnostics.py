@@ -5,9 +5,11 @@ from typing import Any
 
 from homeassistant.core import HomeAssistant
 
+from .const import RAW_DIAGNOSTIC_PROPERTIES
 from .coordinator import XiaomiCookerConfigEntry
 
 SAFE_PROPERTIES = {
+    *RAW_DIAGNOSTIC_PROPERTIES,
     "auto_keep_warm",
     "status_code",
     "fault",

@@ -134,7 +134,9 @@ async def test_reconfigure_invalid_token_is_never_sent(flow_context):
 
 
 @pytest.mark.parametrize("cmc", [True, False])
-async def test_diagnostics_exclude_secrets_and_never_poll(hass, make_coordinator, cmc):
+async def test_diagnostics_exclude_secrets_and_never_poll(
+    hass, make_coordinator, cmc, caplog
+):
     coordinator = make_coordinator(cmc)
     await coordinator.async_select_cooking_menu("jingzhu")
     entry = coordinator.config_entry
@@ -150,6 +152,8 @@ async def test_diagnostics_exclude_secrets_and_never_poll(hass, make_coordinator
             **coordinator.data.properties,
             "token": "private-token",
             "unknown": "private-field",
+            "reset_flag": 2,
+            "recipe_type": 0,
         },
     )
     coordinator.api.reset_mock()
@@ -162,6 +166,15 @@ async def test_diagnostics_exclude_secrets_and_never_poll(hass, make_coordinator
     assert "status" in result and "firmware_version" in result["device"]
     assert coordinator.api.mock_calls == []
     coordinator.async_refresh.assert_not_awaited()
+    assert result["properties"]["reset_flag"] == 2
+    assert result["properties"]["recipe_type"] == 0
+    coordinator.api.fetch_data.return_value = coordinator.data
+    with caplog.at_level(
+        "DEBUG", logger="custom_components.xiaomi_miio_cooker.coordinator"
+    ):
+        await coordinator._async_update_data()
+    assert "protocol diagnostics" in caplog.text and "reset_flag" in caplog.text
+    assert "private-" not in caplog.text
 
 
 async def test_command_error_uses_translation_key_without_raw_reply(make_coordinator):

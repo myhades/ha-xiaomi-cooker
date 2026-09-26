@@ -240,9 +240,9 @@
         }
       },
       "fault": {
-        "name": "Störung",
+        "name": "Fehler",
         "state": {
-          "none": "Keine Störung",
+          "none": "Keine",
           "top_sensor": "Oberer Sensor defekt",
           "bottom_sensor": "Unterer Sensor defekt",
           "communication": "Kommunikationsfehler",
@@ -254,21 +254,6 @@
           }
         }
       },
-      "recipe_id": {
-        "name": "Rezept-ID"
-      },
-      "status_code": {
-        "name": "Statuscode"
-      },
-      "mode_code": {
-        "name": "Moduscode"
-      },
-      "reset_flag": {
-        "name": "Reset-Synchronisierung"
-      },
-      "history_samples": {
-        "name": "Temperaturmesswerte"
-      },
       "recorded_temperature": {
         "name": "Temperatur"
       },
@@ -278,14 +263,6 @@
           "soft": "Weich",
           "middle": "Mittel",
           "hard": "Fest"
-        }
-      },
-      "recipe_type": {
-        "name": "Rezepttyp",
-        "state": {
-          "official": "Offiziell",
-          "cloud": "Cloud",
-          "custom": "Benutzerdefiniert"
         }
       },
       "current_menu": {

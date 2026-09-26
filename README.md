@@ -73,9 +73,9 @@ The **Custom recipe** selector saves a bundled recipe with its default parameter
 
 ### Feedback and Device Settings
 
-Feedback includes the current menu, working status, remaining time and duration. CMC301 also exposes an enum **Fault** sensor (with the raw code in its attributes), remote-control permission, **Water boiled**, buzzer and display settings. The water-boiled flag is used by the official plugin for the add-noodles reminder; it is not a continuous measurement of whether water is currently boiling. Other entities depend on the model.
+Feedback includes the current menu, working status, remaining time and duration. CMC301 also exposes an enum **Error** sensor (with the raw code in its attributes), remote-control permission, **Water boiled**, buzzer and display settings. The water-boiled flag is used by the official plugin for the add-noodles reminder; it is not a continuous measurement of whether water is currently boiling. Other entities depend on the model.
 
-**Panel mode lights** controls the CMC301 panel: on lights all mode indicators with the selected mode flashing; off lights only the selected mode. Raw protocol sensors are disabled by default.
+**Panel mode lights** controls the CMC301 panel: on lights all mode indicators with the selected mode flashing; off lights only the selected mode. Raw protocol values are included in diagnostic downloads and debug logs instead of separate entities.
 
 **Panel auto off** offers **Off** and **2–10 minutes** on CMC301, or **Off** and **5–10 minutes** on normal3, in one-minute steps. Both models support **Completion notification**, which controls the Xiaomi Home completion push notification, separately from the buzzer. Phone delivery still depends on the Xiaomi service and app permissions. normal3 also provides **Lid open alarm** and **Lid-open keep-warm timeout**, with timeout options of 2, 4, 6, 8 and 10 minutes. normal3 settings can be changed while idle.
 

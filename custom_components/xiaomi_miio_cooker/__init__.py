@@ -15,6 +15,7 @@ from .const import (
     MODEL_CMC301,
     MODEL_NORMAL3,
     PLATFORMS,
+    RAW_DIAGNOSTIC_PROPERTIES,
 )
 from .coordinator import XiaomiCookerConfigEntry, XiaomiMiioCookerCoordinator
 from .profiles import get_profiles_for_model
@@ -80,6 +81,7 @@ def _remove_replaced_duration_number(hass, entry, device_unique_id, model=None):
             )
         )
     if model == MODEL_CMC301:
+        replaced.extend(("sensor", key) for key in RAW_DIAGNOSTIC_PROPERTIES)
         replaced.extend(
             [
                 ("switch", "panel_auto_off"),
