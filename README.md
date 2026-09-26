@@ -85,7 +85,9 @@ Temperature comes from recorded temperature history when no direct reading is av
 
 **Cooking finished** is an event entity shared by both models. Each observed cooking cycle emits one `finished` event when the device reports completion or enters automatic keep-warm. Its state is the last event timestamp, with `event_type`, `recipe` and `keep_warm_type` attributes. Stopping, manual keep-warm and reconnecting to an already finished cycle do not emit completion events. Polling can miss a brief completion state or a cycle that finishes while disconnected.
 
-**Status** exposes `keep_warm_type` as `none`, `automatic` or `manual`; insufficient feedback leaves the attribute unknown. **Remaining time** uses whole minutes: time remaining during cooking, time elapsed during keep-warm, distinguished by its `time_direction` attribute (`remaining` or `elapsed`). CMC301 rounds remaining minutes up and elapsed minutes down; normal3 keeps the device's minute readings.
+**Status** distinguishes `automatic_keep_warm` from manual `keep_warm` on both models. **Current menu** retains the preceding recipe during automatic keep-warm and shows the keep-warm recipe for manual operation. **Current duration** shows the current phase's total minutes: the device's cooking or manual keep-warm duration, or the 1440-minute automatic keep-warm limit documented by both official plugins. Missing or ambiguous feedback remains unknown.
+
+**Remaining time** uses whole minutes: time remaining during cooking, time elapsed during keep-warm, distinguished by its `time_direction` attribute (`remaining` or `elapsed`). CMC301 rounds remaining minutes up and elapsed minutes down; normal3 keeps the device's minute readings.
 
 ## Actions
 

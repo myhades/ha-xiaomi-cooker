@@ -18,6 +18,8 @@ SERVICE_START_RECIPE = "start_recipe"
 
 DEFAULT_NAME = "Xiaomi Cooker"
 DEFAULT_UPDATE_INTERVAL = timedelta(seconds=30)
+# Both official plugins specify a 24-hour automatic keep-warm limit.
+AUTO_KEEP_WARM_MINUTES = 1440
 COMMAND_REFRESH_DELAY = 2
 TEMPERATURE_HISTORY_MIN_INTERVAL_SECONDS = 120
 MANUFACTURER = "Xiaomi"

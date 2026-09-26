@@ -8,6 +8,7 @@ from time import monotonic
 
 from miio import DeviceException
 
+from .const import AUTO_KEEP_WARM_MINUTES
 from .exceptions import CookerCommandError, RecipeValidationError
 from .models import CookerData, CookerStatusData
 from .recipe_options import RecipeOptions
@@ -313,7 +314,11 @@ class Cmc301Backend:
                 # Official plugin 10202 distinguishes menu 4; 10187 specifies
                 # a 24-hour limit for automatic keep-warm. Never use the rice
                 # cooking duration as the automatic keep-warm countdown base.
-                duration = 1440 if warm_type == "automatic" else values["duration"]
+                duration = (
+                    AUTO_KEEP_WARM_MINUTES
+                    if warm_type == "automatic"
+                    else values["duration"]
+                )
                 if (
                     warm_type is not None
                     and type(duration) is int

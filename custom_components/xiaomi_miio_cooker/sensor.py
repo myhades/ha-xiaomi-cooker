@@ -37,6 +37,7 @@ STATUS_OPTIONS = (
     "idle",
     "running",
     "keep_warm",
+    "automatic_keep_warm",
     "busy",
     "scheduled",
     "error",
@@ -326,10 +327,6 @@ class XiaomiCookerSensor(XiaomiMiioCookerEntity, SensorEntity):
     @property
     def extra_state_attributes(self):
         """Keep stage provenance and numeric codes separate from display text."""
-        if self.entity_description.key == "status":
-            return {
-                "keep_warm_type": self.coordinator.data.properties.get("keep_warm_type")
-            }
         if self.entity_description.key == "remaining":
             return {
                 "time_direction": self.coordinator.data.properties.get("time_direction")
@@ -363,13 +360,15 @@ class XiaomiCookerSensor(XiaomiMiioCookerEntity, SensorEntity):
             return None
 
         key = self.entity_description.key
+        if key == "status":
+            return self.coordinator.displayed_status
         if key in {"current_menu", "current_taste", "current_duration"}:
             if not self.coordinator.cooking_active:
                 return None
             if key == "current_menu":
                 return self.coordinator.displayed_menu
             if key == "current_duration":
-                return data.status.duration
+                return self.coordinator.displayed_duration
             menu = self.coordinator.displayed_menu
             if menu != "jingzhu" or data.status.status != "running":
                 return None

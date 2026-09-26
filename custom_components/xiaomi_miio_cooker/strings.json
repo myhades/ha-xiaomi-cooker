@@ -151,17 +151,8 @@
           "scheduled": "Scheduled cooking",
           "error": "Error",
           "updating": "Updating",
-          "completed": "Completed"
-        },
-        "state_attributes": {
-          "keep_warm_type": {
-            "name": "Keep warm type",
-            "state": {
-              "none": "None",
-              "automatic": "Automatic",
-              "manual": "Manual"
-            }
-          }
+          "completed": "Completed",
+          "automatic_keep_warm": "Automatic keep warm"
         }
       },
       "menu": {

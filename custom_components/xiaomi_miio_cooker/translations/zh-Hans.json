@@ -151,17 +151,8 @@
           "scheduled": "预约烹饪中",
           "error": "故障",
           "updating": "升级中",
-          "completed": "已完成"
-        },
-        "state_attributes": {
-          "keep_warm_type": {
-            "name": "保温类型",
-            "state": {
-              "none": "无",
-              "automatic": "自动",
-              "manual": "手动"
-            }
-          }
+          "completed": "已完成",
+          "automatic_keep_warm": "自动保温"
         }
       },
       "menu": {

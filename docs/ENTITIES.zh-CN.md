@@ -19,10 +19,10 @@
 | Completion notification | switch | ✓ | ✓ | 小米 App 完成通知设置；normal3 仅待机可改，不是蜂鸣器开关。 |
 | Lid open alarm | switch | — | ✓ | 开盖超时报警设置，待机且读回有效时可用。 |
 | Lid-open keep-warm timeout | select | — | ✓ | 2/4/6/8/10 分钟；待机且读回有效时可用。 |
-| Status | enum sensor | ✓ | ✓ | 两边均有待机、烹饪、保温、预约、故障；CMC301 另有明确的升级、完成状态读回。normal3 其他历史协议过程值仍归入 `busy`，未识别值为 `unknown`。 |
+| Status | enum sensor | ✓ | ✓ | 两边均有待机、烹饪、保温、自动保温、预约、故障；`keep_warm` 表示手动保温，`automatic_keep_warm` 表示煮后自动保温。CMC301 另有升级、完成；normal3 其他历史过程值仍归入 `busy`，未识别值或无法区分来源的保温为 `unknown`。 |
 | Current menu | enum sensor | ✓ | ✓ | 活动期间显示设备读回食谱；不识别的 ID 为 `other`，待机为 `unknown`。两边都不是“准备开始”的菜单选择。 |
 | Fine rice taste（精煮口感） | enum sensor | ✓ | ✓ | 仅精煮饭烹饪中显示 `soft/middle/hard`；其他菜单、保温、预约、待机及缺失反馈均为 `unknown`。CMC301 来自 texture 属性，normal3 来自 stage 中的口感字段。 |
-| Current duration | duration sensor | ✓ | ✓ | 活动期间的设备读回时长，数值分钟；待机为 `unknown`，不使用准备参数补值。 |
+| Current duration | duration sensor | ✓ | ✓ | 当前阶段总时长，整数分钟：烹饪/预约为设备读回烹饪时长；手动保温为设备读回设定时长；自动保温为两份插件定义的 1440 分钟上限。待机、无效值或保温来源未知时为 `unknown`，不使用准备参数补值。 |
 | Remaining time | duration sensor | ✓ | ✓ | 整数分钟；烹饪/预约为剩余时间，保温为已保温时间。属性 `time_direction` 分别为 `remaining/elapsed`。CMC301 剩余时间向上取整、已保温时间向下取整；normal3 保留设备的分钟反馈。 |
 | Cooking finished | event | ✓ | ✓ | 一次可观察到的烹饪完成产生一次 `finished` 事件；实体状态为最后事件时间，属性包含 `event_type`、`recipe` 和 `keep_warm_type`。手动保温结束不算烹饪完成。 |
 | Temperature | temperature sensor | ✓ | ✓ | °C。CMC301 仅取温度曲线最后一个样本，不保证实时；normal3 优先直接温度，不能解析时再取曲线。两边无有效数据都为 `unknown`。 |
@@ -46,14 +46,16 @@ Remaining time 和 Current duration 都使用 HA 的 duration 类型，原生单
 
 CMC301 当前通过 MIoT 2.28 获取曲线，切换状态时重新读取，保温状态没有被代码排除。空曲线、无有效样本或读取失败均会得到未知温度；即使有样本，也可能是最后一笔烹饪温度，不能保证持续反映保温温度。尚未找到可替代的独立实时温度属性。
 
-Status 的 `keep_warm_type` 属性统一为 `none/automatic/manual`（未保温/自动/手动）；正在保温但反馈不足以判断时为 `null`。CMC301 插件 10202 在保温状态下按 `recipeId == 4` 区分手动保温，其他有效食谱 ID 为煮后自动保温。normal3 插件 11030 同样区分菜单 4，其他菜单的 `autokeepwarm` 为自动保温；历史兼容状态无法确定来源时不猜测。
+Status 直接使用 `keep_warm`（保温）与 `automatic_keep_warm`（自动保温），不再附加重复的保温类型属性。CMC301 插件 10202 在保温状态下按 `recipeId == 4` 区分手动保温，其他有效食谱 ID 为煮后自动保温。normal3 插件 11030 同样区分菜单 4，其他菜单的 `autokeepwarm` 为自动保温；历史兼容状态无法确定来源时不猜测。内部协议状态保留，以免改变启动、停止与完成检测的判断。
+
+Current duration 在自动保温时统一为 1440 分钟，依据 CMC301 插件 10187 的 `autoKeepWarmSubtitle` 和 normal3 插件 10556 的 `cookSetAutoKeepwarnMsg`，两者都明确说明自动保温 24 小时。这是正常保温上限，不是实时测得的保证持续时长；开盖保护、取消、故障等可提前结束。手动保温时分别使用 CMC301 的 2.20 和 normal3 的 `t_cook`。当前食谱继续显示原食谱或保温，不随此调整改变。
 
 CMC301 插件 10187 明确说明自动保温最长 24 小时，结合设备的倒计时反馈，已保温分钟按 `(86400 - 剩余秒数) // 60` 换算；手动保温改用设备报告的本次保温时长作为基准。无效时长、负数或超过基准的倒计时返回未知。normal3 的保温分钟本来就是正走时，保持不变。本轮未进行新的加热测试，CMC301 新换算仍需实际运行确认。
 
 例如判断自动保温：
 
 ```jinja2
-{{ state_attr('sensor.xiaomi_rice_cooker_status', 'keep_warm_type') == 'automatic' }}
+{{ is_state('sensor.xiaomi_rice_cooker_status', 'automatic_keep_warm') }}
 ```
 
 ## 烹饪完成自动化
@@ -84,6 +86,14 @@ conditions:
 如果同一自动化还接受手动调用（例如停止并保温），不要把上面的条件放在全局 `conditions` 中；放到 `FINISHED` 分支中，与原来的触发器 ID 条件并列，避免影响手动调用。
 
 事件实体语义依据：[Home Assistant Event entity](https://developers.home-assistant.io/docs/core/entity/event/)。
+
+## Completion notification 与设备事件
+
+Completion notification 是米家完成消息推送开关。CMC301 插件通过 `get_setting/set_setting` 保存推送位，normal3 对应 `en_push`；开关本身不负责把事件送进 HA，也未证明关闭它会同时关闭协议事件。
+
+CMC301 官方 MIoT 规格另有 `siid=2, eiid=1` 的 `cooking-finished` 事件，参数列表为空。若能够接收它，可用作比状态轮询更直接的完成信号；现有集成尚未订阅。官方 SDK 支持 `event.2.1` 形式的订阅，小米官方 HA 实现还提供 `miIO.sub` 本地订阅与事件接收，但未验证这台设备的固件兼容性，也未找到 normal3 对等的事件定义。不能将手机推送、米家 SDK 订阅和当前本地请求/响应连接视为同一个通道。
+
+依据：[MIoT 事件订阅 SDK](https://miecosystem.github.io/miot-plugin-sdk/module-miot_Device.IDeviceWifi.html)、[小米官方本地订阅实现](https://github.com/XiaoMi/ha_xiaomi_home/blob/main/custom_components/xiaomi_home/miot/miot_lan.py)。
 
 ## 2026-09-26 插件与接口复核
 

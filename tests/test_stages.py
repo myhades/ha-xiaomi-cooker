@@ -311,3 +311,60 @@ def test_normal3_warm_type_and_completion_preserve_device_minutes():
         assert data.properties["time_direction"] == (
             "elapsed" if kind != "none" else "remaining"
         )
+
+
+@pytest.mark.parametrize("cmc", [False, True])
+async def test_warm_phase_entities_preserve_recipe_and_control_guards(
+    hass, make_coordinator, device, metadata, cmc
+):
+    coordinator = make_coordinator(cmc)
+    entities = await setup_platforms(hass, coordinator)
+    sensors = {entity.entity_description.key: entity for entity in entities["sensor"]}
+    backend = Cmc301Backend(device, metadata) if cmc else make_normal3()
+    raw = raw_status("03000042ff")
+    if not cmc:
+        backend._cooker.status = Mock(return_value=raw)
+        backend._cooker.get_temperature_history = Mock(
+            return_value=TemperatureHistory("0")
+        )
+    for phase, menu, expected_status, expected_duration in [
+        ("cooking", 2 if cmc else 1, "running", 60),
+        ("automatic", 2 if cmc else 1, "automatic_keep_warm", 1440),
+        ("manual", 4, "keep_warm", 60),
+        ("unknown", 0, None, None),
+        ("idle", 4, "idle", None),
+    ]:
+        if cmc:
+            device.values.update(
+                {
+                    (2, 1): 2 if phase == "cooking" else 1 if phase == "idle" else 4,
+                    (2, 19): menu,
+                    (2, 20): 60,
+                    (2, 21): 85800 if phase == "automatic" else 3000,
+                }
+            )
+        else:
+            raw.data.update(
+                func="running"
+                if phase in ("cooking", "manual")
+                else "waiting"
+                if phase == "idle"
+                else "keepwarm"
+                if phase == "unknown"
+                else "autokeepwarm",
+                menu=f"{menu:04x}",
+            )
+        coordinator.async_set_updated_data(backend.fetch_data())
+        assert sensors["status"].native_value == expected_status
+        assert sensors["current_duration"].native_value == expected_duration
+        assert "automatic_keep_warm" in sensors["status"].options
+        assert sensors["status"].extra_state_attributes is None
+        assert not entities["button"][0].available  # No prepared recipe.
+        assert entities["button"][1].available == (phase != "idle")
+        assert entities["select"][0].available == (phase == "idle")
+        if phase in ("manual", "automatic"):
+            assert sensors["remaining"].native_value == 10
+            assert sensors["current_menu"].native_value == (
+                "baowen" if phase == "manual" else "jingzhu"
+            )
+            assert sensors["current_taste"].native_value is None

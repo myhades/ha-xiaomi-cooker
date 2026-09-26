@@ -151,17 +151,8 @@
           "scheduled": "Geplantes Kochen",
           "error": "Fehler",
           "updating": "Aktualisierung läuft",
-          "completed": "Fertig"
-        },
-        "state_attributes": {
-          "keep_warm_type": {
-            "name": "Warmhalteart",
-            "state": {
-              "none": "Keine",
-              "automatic": "Automatisch",
-              "manual": "Manuell"
-            }
-          }
+          "completed": "Fertig",
+          "automatic_keep_warm": "Automatisches Warmhalten"
         }
       },
       "menu": {

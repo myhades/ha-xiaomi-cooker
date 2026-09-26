@@ -14,6 +14,7 @@ from miio import DeviceException
 from . import cmc301, normal3
 from .api import CookerData, UnsupportedModelError, XiaomiMiioCookerApi
 from .const import (
+    AUTO_KEEP_WARM_MINUTES,
     COMMAND_REFRESH_DELAY,
     DEFAULT_NAME,
     DEFAULT_UPDATE_INTERVAL,
@@ -89,6 +90,35 @@ class XiaomiMiioCookerCoordinator(DataUpdateCoordinator[CookerData]):
         }
 
     @property
+    def displayed_status(self) -> str | None:
+        """Normalize warm phases without changing protocol command guards."""
+        if self.data is None:
+            return None
+        kind = self.data.properties.get("keep_warm_type")
+        if kind == "automatic":
+            return "automatic_keep_warm"
+        if kind == "manual":
+            return "keep_warm"
+        # A warm response with no identifiable source must not imply manual warm.
+        if self.data.status.status == "keep_warm":
+            return None
+        return self.data.status.status
+
+    @property
+    def displayed_duration(self) -> int | None:
+        """Return the current phase's duration, in whole minutes."""
+        if not self.cooking_active:
+            return None
+        kind = self.data.properties.get("keep_warm_type")
+        if kind == "automatic":
+            # A plugin-defined limit, not the preceding recipe's reported duration.
+            return AUTO_KEEP_WARM_MINUTES
+        if self.data.status.status == "keep_warm" and kind != "manual":
+            return None
+        duration = self.data.status.duration
+        return duration if type(duration) is int and duration > 0 else None
+
+    @property
     def displayed_menu(self) -> str | None:
         if not self.cooking_active:
             return self._selected_profile
@@ -106,7 +136,7 @@ class XiaomiMiioCookerCoordinator(DataUpdateCoordinator[CookerData]):
         if not self.cooking_active:
             return getattr(self.recipe_options, key, None)
         if key == "duration":
-            return self.data.status.duration
+            return self.displayed_duration
         if key == "taste" and self.displayed_menu == "jingzhu":
             if self.is_cmc301:
                 return self.data.properties.get("texture")
